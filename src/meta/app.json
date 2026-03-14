@@ -1,14 +1,14 @@
 {
-  "id": "my-app",
-  "name": "My App",
+  "id": "tasklist",
+  "name": "Taskboard",
   "version": {
     "major": 1,
     "minor": 0,
     "dev": 0
   },
-  "author": "Your Name",
-  "contactEmail": "you@example.com",
-  "description": "Description of what your app does",
+  "author": "Matthew Morgan",
+  "contactEmail": "matthew@morgantech.info",
+  "description": "Checklist and todo management system",
   "dependencies": {},
   "tables": [],
   "authorizations": [],
@@ -16,9 +16,21 @@
   "apiRoutes": [
     { "path": "items", "method": "GET", "description": "List all items" },
     { "path": "items", "method": "POST", "description": "Create a new item" },
-    { "path": "items/[item-id]", "method": "GET", "description": "Get an item by ID" },
-    { "path": "items/[item-id]", "method": "PATCH", "description": "Update an item" },
-    { "path": "items/[item-id]", "method": "DELETE", "description": "Delete an item" }
+    {
+      "path": "items/[item-id]",
+      "method": "GET",
+      "description": "Get an item by ID"
+    },
+    {
+      "path": "items/[item-id]",
+      "method": "PATCH",
+      "description": "Update an item"
+    },
+    {
+      "path": "items/[item-id]",
+      "method": "DELETE",
+      "description": "Delete an item"
+    }
   ],
   "agents": [],
   "applets": [
