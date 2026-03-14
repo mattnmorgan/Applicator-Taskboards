@@ -1,15 +1,30 @@
 "use client";
 
-import type UIContext from "@sdk/types/ui-context";
+import React, { useState } from "react";
+import ChecklistList from "./ChecklistList";
+import ChecklistDetail from "./ChecklistDetail";
+import styles from "./App.module.css";
 
-interface Props {
-  context: UIContext;
-}
+type Page =
+  | { view: "list" }
+  | { view: "detail"; checklistId: string };
 
-export default function App({ context }: Props) {
+export default function App() {
+  const [page, setPage] = useState<Page>({ view: "list" });
+
   return (
-    <div>
-      <h1>My App</h1>
+    <div className={styles.app}>
+      {page.view === "list" && (
+        <ChecklistList
+          onOpen={(id) => setPage({ view: "detail", checklistId: id })}
+        />
+      )}
+      {page.view === "detail" && (
+        <ChecklistDetail
+          checklistId={page.checklistId}
+          onBack={() => setPage({ view: "list" })}
+        />
+      )}
     </div>
   );
 }

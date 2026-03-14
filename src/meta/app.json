@@ -1,6 +1,6 @@
 {
   "id": "tasklist",
-  "name": "Taskboard",
+  "name": "Taskboards",
   "version": {
     "major": 1,
     "minor": 0,
@@ -8,18 +8,282 @@
   },
   "author": "Matthew Morgan",
   "contactEmail": "matthew@morgantech.info",
-  "description": "Checklist and todo management system",
+  "description": "Collaborative checklisting application with sections, assignments, and notifications",
+  "requiredPermissions": [],
   "dependencies": {},
-  "tables": [],
+  "tables": [
+    {
+      "name": "checklist",
+      "description": "A named checklist with sections and items",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Name of the checklist"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "description": "Optional description of the checklist"
+        },
+        {
+          "name": "ownerId",
+          "type": "string",
+          "required": true,
+          "description": "User ID of the checklist owner"
+        }
+      ]
+    },
+    {
+      "name": "section",
+      "description": "A section within a checklist",
+      "fields": [
+        {
+          "name": "checklistId",
+          "type": "string",
+          "required": true,
+          "description": "ID of the parent checklist"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "Section name"
+        },
+        {
+          "name": "order",
+          "type": "number",
+          "required": true,
+          "description": "Display order within the checklist"
+        }
+      ]
+    },
+    {
+      "name": "item",
+      "description": "An item within a checklist section",
+      "fields": [
+        {
+          "name": "sectionId",
+          "type": "string",
+          "required": true,
+          "description": "ID of the parent section"
+        },
+        {
+          "name": "checklistId",
+          "type": "string",
+          "required": true,
+          "description": "ID of the parent checklist (denormalized for queries)"
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "Item title"
+        },
+        {
+          "name": "assigneeId",
+          "type": "string",
+          "description": "User ID of the assignee"
+        },
+        {
+          "name": "dueDate",
+          "type": "string",
+          "description": "ISO date (e.g. 2026-03-15) or custom text for reusable items (e.g. EOM, 1st)"
+        },
+        {
+          "name": "reusable",
+          "type": "boolean",
+          "description": "If true, item stays visible after completion"
+        },
+        {
+          "name": "complete",
+          "type": "boolean",
+          "description": "Whether the item is checked off"
+        },
+        {
+          "name": "order",
+          "type": "number",
+          "description": "Display order within the complete or incomplete group in a section"
+        }
+      ]
+    },
+    {
+      "name": "share",
+      "description": "Grants a user access to a checklist",
+      "fields": [
+        {
+          "name": "checklistId",
+          "type": "string",
+          "required": true,
+          "description": "ID of the shared checklist"
+        },
+        {
+          "name": "userId",
+          "type": "string",
+          "required": true,
+          "description": "ID of the user being granted access"
+        },
+        {
+          "name": "role",
+          "type": "string",
+          "required": true,
+          "description": "Access role: editor or viewer"
+        }
+      ]
+    },
+    {
+      "name": "subscription",
+      "description": "A user notification subscription for a checklist or item",
+      "fields": [
+        {
+          "name": "userId",
+          "type": "string",
+          "required": true,
+          "description": "Subscribing user ID"
+        },
+        {
+          "name": "checklistId",
+          "type": "string",
+          "description": "Checklist ID when watching an entire checklist"
+        },
+        {
+          "name": "itemId",
+          "type": "string",
+          "description": "Item ID when watching a specific item"
+        }
+      ]
+    },
+    {
+      "name": "notification_log",
+      "description": "Log of notifications dispatched by the nightly notifier agent",
+      "fields": [
+        {
+          "name": "userId",
+          "type": "string",
+          "required": true,
+          "description": "Target user ID"
+        },
+        {
+          "name": "itemId",
+          "type": "string",
+          "description": "Item that triggered the notification"
+        },
+        {
+          "name": "itemTitle",
+          "type": "string",
+          "description": "Title of the item at time of notification"
+        },
+        {
+          "name": "checklistId",
+          "type": "string",
+          "description": "Parent checklist ID"
+        },
+        {
+          "name": "dueDate",
+          "type": "string",
+          "description": "Due date of the item"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "description": "Notification type: warning (today) or info (tomorrow)"
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "description": "Human-readable notification message"
+        },
+        {
+          "name": "sentAt",
+          "type": "string",
+          "description": "ISO timestamp when the notification was sent"
+        }
+      ]
+    }
+  ],
   "authorizations": [],
   "authorities": [],
   "apiRoutes": [
-    { "path": "items", "method": "GET", "description": "List all items" },
-    { "path": "items", "method": "POST", "description": "Create a new item" },
     {
-      "path": "items/[item-id]",
+      "path": "checklists",
       "method": "GET",
-      "description": "Get an item by ID"
+      "description": "List all checklists the user owns or has access to"
+    },
+    {
+      "path": "checklists",
+      "method": "POST",
+      "description": "Create a new checklist"
+    },
+    {
+      "path": "checklists/[checklist-id]",
+      "method": "GET",
+      "description": "Get a checklist with all sections and items"
+    },
+    {
+      "path": "checklists/[checklist-id]",
+      "method": "PATCH",
+      "description": "Update checklist name or description"
+    },
+    {
+      "path": "checklists/[checklist-id]",
+      "method": "DELETE",
+      "description": "Delete a checklist (owner only)"
+    },
+    {
+      "path": "checklists/[checklist-id]/sections",
+      "method": "POST",
+      "description": "Add a new section to a checklist"
+    },
+    {
+      "path": "checklists/[checklist-id]/sections/reorder",
+      "method": "POST",
+      "description": "Reorder sections within a checklist"
+    },
+    {
+      "path": "checklists/[checklist-id]/shares",
+      "method": "GET",
+      "description": "List all shares for a checklist"
+    },
+    {
+      "path": "checklists/[checklist-id]/shares",
+      "method": "POST",
+      "description": "Share a checklist with a user"
+    },
+    {
+      "path": "checklists/[checklist-id]/shares/[share-id]",
+      "method": "PATCH",
+      "description": "Update a share role"
+    },
+    {
+      "path": "checklists/[checklist-id]/shares/[share-id]",
+      "method": "DELETE",
+      "description": "Remove a share"
+    },
+    {
+      "path": "checklists/[checklist-id]/subscriptions",
+      "method": "GET",
+      "description": "Get current user subscriptions for a checklist"
+    },
+    {
+      "path": "sections/[section-id]",
+      "method": "PATCH",
+      "description": "Rename a section"
+    },
+    {
+      "path": "sections/[section-id]",
+      "method": "DELETE",
+      "description": "Delete a section and its items"
+    },
+    {
+      "path": "sections/[section-id]/items",
+      "method": "POST",
+      "description": "Add an item to a section"
+    },
+    {
+      "path": "sections/[section-id]/items/reorder",
+      "method": "POST",
+      "description": "Reorder items within a section group"
     },
     {
       "path": "items/[item-id]",
@@ -30,16 +294,71 @@
       "path": "items/[item-id]",
       "method": "DELETE",
       "description": "Delete an item"
+    },
+    {
+      "path": "subscriptions",
+      "method": "POST",
+      "description": "Subscribe to a checklist or item"
+    },
+    {
+      "path": "subscriptions/[subscription-id]",
+      "method": "DELETE",
+      "description": "Unsubscribe"
+    },
+    {
+      "path": "users",
+      "method": "GET",
+      "description": "List system users for assignee selection"
+    },
+    {
+      "path": "widget/[checklist-id]",
+      "method": "GET",
+      "description": "Get upcoming items for the homescreen widget"
     }
   ],
-  "agents": [],
+  "agents": [
+    {
+      "name": "notifier",
+      "label": "Nightly Notifier",
+      "description": "Sends system notifications for checklist items due today or tomorrow",
+      "cron": "0 6 * * *"
+    }
+  ],
   "applets": [
     {
       "id": "main",
-      "label": "My App",
-      "description": "Main application view",
+      "label": "Tasklist",
+      "description": "Main checklisting application",
       "target": "app",
       "component": "App"
+    },
+    {
+      "id": "widget",
+      "label": "Checklist Widget",
+      "description": "Shows upcoming items for a single checklist on the homescreen",
+      "target": "home",
+      "component": "Widget",
+      "settings": [
+        {
+          "name": "checklistId",
+          "label": "Checklist ID",
+          "type": "text",
+          "placeholder": "Paste the checklist ID here"
+        },
+        {
+          "name": "lookahead",
+          "label": "Show items due within",
+          "type": "select",
+          "defaultValue": "none",
+          "options": [
+            { "value": "24", "label": "24 hours" },
+            { "value": "48", "label": "48 hours" },
+            { "value": "72", "label": "72 hours" },
+            { "value": "168", "label": "1 week" },
+            { "value": "none", "label": "All incomplete" }
+          ]
+        }
+      ]
     }
   ]
 }
