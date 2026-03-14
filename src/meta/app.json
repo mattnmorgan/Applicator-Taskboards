@@ -29,9 +29,10 @@
         },
         {
           "name": "ownerId",
-          "type": "string",
+          "type": "relationship",
+          "relatedTo": "system:user",
           "required": true,
-          "description": "User ID of the checklist owner"
+          "description": "User who owns the checklist"
         }
       ]
     },
@@ -41,9 +42,10 @@
       "fields": [
         {
           "name": "checklistId",
-          "type": "string",
+          "type": "relationship",
+          "relatedTo": "checklist",
           "required": true,
-          "description": "ID of the parent checklist"
+          "description": "Parent checklist"
         },
         {
           "name": "name",
@@ -65,15 +67,17 @@
       "fields": [
         {
           "name": "sectionId",
-          "type": "string",
+          "type": "relationship",
+          "relatedTo": "section",
           "required": true,
-          "description": "ID of the parent section"
+          "description": "Parent section"
         },
         {
           "name": "checklistId",
-          "type": "string",
+          "type": "relationship",
+          "relatedTo": "checklist",
           "required": true,
-          "description": "ID of the parent checklist (denormalized for queries)"
+          "description": "Parent checklist (denormalized for queries)"
         },
         {
           "name": "title",
@@ -83,8 +87,9 @@
         },
         {
           "name": "assigneeId",
-          "type": "string",
-          "description": "User ID of the assignee"
+          "type": "relationship",
+          "relatedTo": "system:user",
+          "description": "Assigned user"
         },
         {
           "name": "dueDate",
@@ -109,95 +114,27 @@
       ]
     },
     {
-      "name": "share",
-      "description": "Grants a user access to a checklist",
-      "fields": [
-        {
-          "name": "checklistId",
-          "type": "string",
-          "required": true,
-          "description": "ID of the shared checklist"
-        },
-        {
-          "name": "userId",
-          "type": "string",
-          "required": true,
-          "description": "ID of the user being granted access"
-        },
-        {
-          "name": "role",
-          "type": "string",
-          "required": true,
-          "description": "Access role: editor or viewer"
-        }
-      ]
-    },
-    {
       "name": "subscription",
       "description": "A user notification subscription for a checklist or item",
       "fields": [
         {
           "name": "userId",
-          "type": "string",
+          "type": "relationship",
+          "relatedTo": "system:user",
           "required": true,
-          "description": "Subscribing user ID"
+          "description": "Subscribing user"
         },
         {
           "name": "checklistId",
-          "type": "string",
-          "description": "Checklist ID when watching an entire checklist"
+          "type": "relationship",
+          "relatedTo": "checklist",
+          "description": "Checklist being watched (set when watching an entire checklist)"
         },
         {
           "name": "itemId",
-          "type": "string",
-          "description": "Item ID when watching a specific item"
-        }
-      ]
-    },
-    {
-      "name": "notification_log",
-      "description": "Log of notifications dispatched by the nightly notifier agent",
-      "fields": [
-        {
-          "name": "userId",
-          "type": "string",
-          "required": true,
-          "description": "Target user ID"
-        },
-        {
-          "name": "itemId",
-          "type": "string",
-          "description": "Item that triggered the notification"
-        },
-        {
-          "name": "itemTitle",
-          "type": "string",
-          "description": "Title of the item at time of notification"
-        },
-        {
-          "name": "checklistId",
-          "type": "string",
-          "description": "Parent checklist ID"
-        },
-        {
-          "name": "dueDate",
-          "type": "string",
-          "description": "Due date of the item"
-        },
-        {
-          "name": "type",
-          "type": "string",
-          "description": "Notification type: warning (today) or info (tomorrow)"
-        },
-        {
-          "name": "message",
-          "type": "string",
-          "description": "Human-readable notification message"
-        },
-        {
-          "name": "sentAt",
-          "type": "string",
-          "description": "ISO timestamp when the notification was sent"
+          "type": "relationship",
+          "relatedTo": "item",
+          "description": "Item being watched (set when watching a specific item)"
         }
       ]
     }
@@ -308,7 +245,7 @@
     {
       "path": "users",
       "method": "GET",
-      "description": "List system users for assignee selection"
+      "description": "List active system users for assignee selection"
     },
     {
       "path": "widget/[checklist-id]",
@@ -330,14 +267,14 @@
       "label": "Tasklist",
       "description": "Main checklisting application",
       "target": "app",
-      "component": "App"
+      "component": "Taskboard"
     },
     {
       "id": "widget",
       "label": "Checklist Widget",
       "description": "Shows upcoming items for a single checklist on the homescreen",
       "target": "home",
-      "component": "Widget",
+      "component": "TaskboardWidget",
       "settings": [
         {
           "name": "checklistId",

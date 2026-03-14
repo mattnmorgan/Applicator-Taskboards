@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { ShareRecord, getChecklistAccess } from "../../../_utils";
+import {
+  getChecklistAccess,
+  createChecklistShare,
+  listChecklistShares,
+} from "../../../_utils";
 
 // GET /api/tasklist/checklists/:checklistId/shares — list all shares
 export async function GET(
@@ -13,18 +17,18 @@ export async function GET(
   if (!access) return NextResponse.json({ error: "Not found or access denied" }, { status: 404 });
   if (access.level !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const shares = context.recordManager<ShareRecord>("tasklist", "share");
-  const result = await shares.readRecords({ fields: { checklistId }, limit: 500 });
+  const cas = await listChecklistShares(context, checklistId);
 
   const enriched = await Promise.all(
-    result.records.map(async (r) => {
-      const u = await context.user(r.data.userId);
+    cas.map(async (ca: any) => {
+      const ctx = ca.data.context ? JSON.parse(ca.data.context) : {};
+      const u = await context.user(ca.data.user);
       return {
-        id: r.id,
-        userId: r.data.userId,
-        displayName: u?.display_name || u?.username || r.data.userId,
-        username: u?.username || r.data.userId,
-        role: r.data.role,
+        id: ca.id,
+        userId: ca.data.user,
+        displayName: u?.display_name || u?.username || ca.data.user,
+        username: u?.username || ca.data.user,
+        role: ctx.role as "editor" | "viewer",
       };
     }),
   );
@@ -51,36 +55,26 @@ export async function POST(
     if (!["editor", "viewer"].includes(body.role)) {
       return NextResponse.json({ error: "role must be editor or viewer" }, { status: 400 });
     }
-
-    // Prevent sharing with self
     if (body.userId === access.userId) {
       return NextResponse.json({ error: "Cannot share with yourself" }, { status: 400 });
     }
 
-    const shares = context.recordManager<ShareRecord>("tasklist", "share");
-
     // Check for existing share
-    const existing = await shares.readRecords({ fields: { checklistId }, limit: 500 });
-    const alreadyShared = existing.records.find((r) => r.data.userId === body.userId);
+    const existing = await listChecklistShares(context, checklistId);
+    const alreadyShared = existing.find((ca: any) => ca.data.user === body.userId);
     if (alreadyShared) {
       return NextResponse.json({ error: "Already shared with this user" }, { status: 409 });
     }
 
-    const table = await shares.getTable();
-    const record = await shares.createRecord(table, {
-      checklistId,
-      userId: body.userId,
-      role: body.role,
-    });
-
+    const ca = await createChecklistShare(context, checklistId, body.userId, body.role, access.userId);
     const u = await context.user(body.userId);
     return NextResponse.json(
       {
-        id: record.id,
-        userId: record.data.userId,
+        id: ca.id,
+        userId: body.userId,
         displayName: u?.display_name || u?.username || body.userId,
         username: u?.username || body.userId,
-        role: record.data.role,
+        role: body.role,
       },
       { status: 201 },
     );

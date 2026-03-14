@@ -11,10 +11,7 @@
  * - "warning" for items due today
  * - "info" for items due tomorrow
  *
- * Note: System-level cross-app notification creation via records.create is scoped to
- * the app's own tables. Notifications are stored in the tasklist notification_log table.
- * When the SDK supports cross-app record creation, update records.create to target
- * appId: "system", table: "notifications" directly.
+ * Only active users receive notifications.
  */
 
 function sdk<T = any>(method: string, params: Record<string, any>): Promise<T> {
@@ -42,10 +39,13 @@ async function main() {
   const today = toDateString(new Date());
   const tomorrow = toDateString(new Date(Date.now() + 86400000));
 
+  // Fetch all active users so we only notify users who are still active
+  const activeUsers = await sdk<any[]>("system.getUsers", { includeInactive: false });
+  const activeUserIds = new Set(activeUsers.map((u: any) => u.id));
+
   // Fetch all non-reusable, incomplete items with a due date of today or tomorrow
   const itemResult = await sdk<{ records: any[]; total: number }>("records.list", {
     table: "item",
-    filters: [],
     limit: 10000,
   });
 
@@ -63,7 +63,7 @@ async function main() {
 
   await sdk("logger.info", { message: `Found ${dueItems.length} due item(s)` });
 
-  // Fetch subscriptions for checklist-level watches
+  // Fetch subscriptions for checklist-level and item-level watches
   const subResult = await sdk<{ records: any[]; total: number }>("records.list", {
     table: "subscription",
     limit: 10000,
@@ -85,7 +85,7 @@ async function main() {
     }
   }
 
-  // For each due item, collect the set of users to notify
+  // For each due item, collect the set of active users to notify
   const notifications: Array<{
     userId: string;
     itemId: string;
@@ -112,6 +112,9 @@ async function main() {
     if (cw) cw.forEach((uid) => usersToNotify.add(uid));
 
     for (const userId of usersToNotify) {
+      // Skip inactive users
+      if (!activeUserIds.has(userId)) continue;
+
       notifications.push({
         userId,
         itemId: item.id,
@@ -125,28 +128,17 @@ async function main() {
 
   await sdk("logger.info", { message: `Sending ${notifications.length} notification(s)` });
 
-  // Create system notifications
-  // Note: records.create targets this app's tables. Once the SDK supports
-  // cross-app record creation (appId: "system"), change table to "notifications"
-  // and add appId: "system" to target the system notification center.
   for (const n of notifications) {
     const dueLabel = n.type === "warning" ? "today" : "tomorrow";
     try {
-      await sdk("records.create", {
-        table: "notification_log",
-        data: {
-          userId: n.userId,
-          itemId: n.itemId,
-          itemTitle: n.itemTitle,
-          checklistId: n.checklistId,
-          dueDate: n.dueDate,
-          type: n.type,
-          message: `"${n.itemTitle}" is due ${dueLabel}`,
-          sentAt: new Date().toISOString(),
-        },
+      await sdk("system.sendNotification", {
+        userId: n.userId,
+        title: `Task due ${dueLabel}`,
+        message: `"${n.itemTitle}" is due ${dueLabel}`,
+        type: n.type,
       });
     } catch (err: any) {
-      await sdk("logger.warn", { message: `Failed to log notification for user ${n.userId}: ${err.message}` });
+      await sdk("logger.warn", { message: `Failed to notify user ${n.userId}: ${err.message}` });
     }
   }
 

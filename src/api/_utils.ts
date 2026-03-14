@@ -1,45 +1,28 @@
 import { ApiContext } from "@applicator/sdk/context";
+import { ChecklistRecord } from "../types/ChecklistRecord";
 
 export type AccessLevel = "owner" | "editor" | "viewer";
 
-export interface ChecklistRecord {
-  name: string;
-  description: string;
-  ownerId: string;
+// Re-export record types for use in API routes
+export type { ChecklistRecord } from "../types/ChecklistRecord";
+export type { SectionRecord } from "../types/SectionRecord";
+export type { ItemRecord } from "../types/ItemRecord";
+export type { SubscriptionRecord } from "../types/SubscriptionRecord";
+
+// Contextual authority recordId format for a checklist's shares
+function checklistRecordId(checklistId: string) {
+  return `checklist-${checklistId}`;
 }
 
-export interface SectionRecord {
-  checklistId: string;
-  name: string;
-  order: number;
-}
-
-export interface ItemRecord {
-  sectionId: string;
-  checklistId: string;
-  title: string;
-  assigneeId: string;
-  dueDate: string;
-  reusable: boolean;
-  complete: boolean;
-  order: number;
-}
-
-export interface ShareRecord {
-  checklistId: string;
-  userId: string;
-  role: string;
-}
-
-export interface SubscriptionRecord {
-  userId: string;
-  checklistId: string;
-  itemId: string;
+// Permission strings encode the access role
+export function sharePermission(checklistId: string, role: "editor" | "viewer") {
+  return `tasklist:checklist:${checklistId}:${role}`;
 }
 
 /**
  * Returns the access level of the current user for a checklist, or null if no access.
- * Also returns the checklist record and the current user ID.
+ * Owners are identified by the ownerId field; shared access is managed via
+ * contextual authorities (user-scoped, keyed by checklist ID).
  */
 export async function getChecklistAccess(
   context: ApiContext,
@@ -56,17 +39,56 @@ export async function getChecklistAccess(
     return { level: "owner", userId: user.id, checklist: checklist as { id: string; data: ChecklistRecord } };
   }
 
-  const shares = context.recordManager<ShareRecord>("tasklist", "share");
-  const result = await shares.readRecords({ fields: { checklistId }, limit: 500 });
-  const userShare = result.records.find((r) => r.data.userId === user.id);
+  const caManager = (context as any).contextualAuthorityManager;
+  const cas = await caManager.getContextualAuthorities("tasklist", checklistRecordId(checklistId));
+  const userCA = cas.find((ca: any) => ca.data.user === user.id);
 
-  if (userShare) {
+  if (userCA) {
+    const ctx = userCA.data.context ? JSON.parse(userCA.data.context) : {};
     return {
-      level: userShare.data.role as "editor" | "viewer",
+      level: ctx.role as "editor" | "viewer",
       userId: user.id,
       checklist: checklist as { id: string; data: ChecklistRecord },
     };
   }
 
   return null;
+}
+
+/**
+ * Creates a user-scoped contextual authority granting a user access to a checklist.
+ * The role ("editor" or "viewer") is stored in the authority's context field.
+ */
+export async function createChecklistShare(
+  context: ApiContext,
+  checklistId: string,
+  userId: string,
+  role: "editor" | "viewer",
+  createdBy: string,
+) {
+  const caManager = (context as any).contextualAuthorityManager;
+  return caManager.createUserContextualAuthority({
+    app: "tasklist",
+    recordId: checklistRecordId(checklistId),
+    permission: sharePermission(checklistId, role),
+    user: userId,
+    createdBy,
+    context: JSON.stringify({ role }),
+  });
+}
+
+/**
+ * Lists all contextual authorities for a checklist (i.e., all shares).
+ */
+export async function listChecklistShares(context: ApiContext, checklistId: string) {
+  const caManager = (context as any).contextualAuthorityManager;
+  return caManager.getContextualAuthorities("tasklist", checklistRecordId(checklistId));
+}
+
+/**
+ * Deletes a contextual authority by its full ID.
+ */
+export async function deleteChecklistShare(context: ApiContext, shareId: string) {
+  const caManager = (context as any).contextualAuthorityManager;
+  return caManager.deleteContextualAuthority(shareId);
 }

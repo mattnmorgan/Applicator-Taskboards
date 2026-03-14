@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import styles from "./App.module.css";
+import styles from "../apps/Taskboard.module.css";
 
 interface WidgetItem {
   id: string;
@@ -20,7 +20,7 @@ interface Props {
   };
 }
 
-export default function Widget({ settings }: Props) {
+export default function TaskboardWidget({ settings }: Props) {
   const [checklistName, setChecklistName] = useState<string | null>(null);
   const [items, setItems] = useState<WidgetItem[]>([]);
   const [loading, setLoading] = useState(false);

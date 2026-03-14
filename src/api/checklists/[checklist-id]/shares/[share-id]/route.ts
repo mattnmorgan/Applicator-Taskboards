@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { ShareRecord, getChecklistAccess } from "../../../../_utils";
+import {
+  getChecklistAccess,
+  createChecklistShare,
+  deleteChecklistShare,
+  listChecklistShares,
+} from "../../../../_utils";
 
 // PATCH /api/tasklist/checklists/:checklistId/shares/:shareId — update role
+// Since contextual authorities are immutable, we delete the old one and create a new one.
 export async function PATCH(
   req: NextRequest,
   context: ApiContext,
@@ -19,15 +25,24 @@ export async function PATCH(
       return NextResponse.json({ error: "role must be editor or viewer" }, { status: 400 });
     }
 
-    const shares = context.recordManager<ShareRecord>("tasklist", "share");
-    const existing = await shares.readRecord(shareId);
-    if (!existing || existing.data.checklistId !== checklistId) {
+    // Find the existing share to get the userId
+    const cas = await listChecklistShares(context, checklistId);
+    const existing = cas.find((ca: any) => ca.id === shareId);
+    if (!existing) {
       return NextResponse.json({ error: "Share not found" }, { status: 404 });
     }
 
-    const table = await shares.getTable();
-    const updated = await shares.updateRecord(table, shareId, { role: body.role });
-    return NextResponse.json({ id: updated.id, ...updated.data });
+    // Delete old authority and create new with updated role
+    await deleteChecklistShare(context, shareId);
+    const updated = await createChecklistShare(
+      context,
+      checklistId,
+      existing.data.user,
+      body.role,
+      access.userId,
+    );
+
+    return NextResponse.json({ id: updated.id, userId: existing.data.user, role: body.role });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -45,13 +60,14 @@ export async function DELETE(
   if (access.level !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    const shares = context.recordManager<ShareRecord>("tasklist", "share");
-    const existing = await shares.readRecord(shareId);
-    if (!existing || existing.data.checklistId !== checklistId) {
+    // Verify the share belongs to this checklist before deleting
+    const cas = await listChecklistShares(context, checklistId);
+    const existing = cas.find((ca: any) => ca.id === shareId);
+    if (!existing) {
       return NextResponse.json({ error: "Share not found" }, { status: 404 });
     }
 
-    await shares.deleteRecord(shareId);
+    await deleteChecklistShare(context, shareId);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
