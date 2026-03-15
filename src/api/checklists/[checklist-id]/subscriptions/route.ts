@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { SubscriptionRecord, getChecklistAccess } from "../../../_utils";
+import { SubscriptionRecord } from "@/src/types/SubscriptionRecord";
+import { getChecklistAccess } from "@/src/lib/checklist-access";
 
 // GET /api/tasklist/checklists/:checklistId/subscriptions
 // Returns the current user's subscription state for this checklist and all its items

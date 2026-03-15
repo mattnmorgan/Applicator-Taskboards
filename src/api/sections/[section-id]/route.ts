@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { SectionRecord, ItemRecord, SubscriptionRecord, getChecklistAccess } from "../../_utils";
+import { SectionRecord } from "@/src/types/SectionRecord";
+import { ItemRecord } from "@/src/types/ItemRecord";
+import { SubscriptionRecord } from "@/src/types/SubscriptionRecord";
+import { getChecklistAccess } from "@/src/lib/checklist-access";
 
 // PATCH /api/tasklist/sections/:sectionId — rename a section
 export async function PATCH(

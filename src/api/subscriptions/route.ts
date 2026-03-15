@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { SubscriptionRecord, ItemRecord, getChecklistAccess } from "../_utils";
+import { SubscriptionRecord } from "@/src/types/SubscriptionRecord";
+import { ItemRecord } from "@/src/types/ItemRecord";
+import { getChecklistAccess } from "@/src/lib/checklist-access";
 
 // POST /api/tasklist/subscriptions — subscribe to a checklist or item
 // Body: { checklistId } OR { itemId, checklistId }

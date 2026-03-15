@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { ItemRecord, SubscriptionRecord, getChecklistAccess } from "../../_utils";
+import { ItemRecord } from "@/src/types/ItemRecord";
+import { SubscriptionRecord } from "@/src/types/SubscriptionRecord";
+import { getChecklistAccess } from "@/src/lib/checklist-access";
 
 // PATCH /api/tasklist/items/:itemId — update item fields
 export async function PATCH(

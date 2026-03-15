@@ -2,10 +2,10 @@
 
 import React, { useState, useRef, useCallback } from "react";
 import { Icon } from "@applicator/sdk/components";
-import styles from "../apps/Taskboard.module.css";
-import { SectionData } from "../types/SectionData";
-import { ItemData } from "../types/ItemData";
-import { SystemUser } from "../types/SystemUser";
+import styles from "@/src/apps/Taskboard.module.css";
+import { SectionData } from "@/src/types/SectionData";
+import { ItemData } from "@/src/types/ItemData";
+import { SystemUser } from "@/src/types/SystemUser";
 import ChecklistItem from "./ChecklistItem";
 
 interface Props {

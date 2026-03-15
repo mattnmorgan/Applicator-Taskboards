@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import styles from "../apps/Taskboard.module.css";
+import styles from "@/src/apps/Taskboard.module.css";
 
 interface WidgetItem {
   id: string;

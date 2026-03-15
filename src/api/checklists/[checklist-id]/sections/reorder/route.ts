@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { SectionRecord, getChecklistAccess } from "../../../../_utils";
+import { SectionRecord } from "@/src/types/SectionRecord";
+import { getChecklistAccess } from "@/src/lib/checklist-access";
 
 // POST /api/tasklist/checklists/:checklistId/sections/reorder
 // Body: { sections: [{ id, order }] }

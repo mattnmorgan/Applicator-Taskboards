@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import ChecklistList from "../components/ChecklistList";
-import ChecklistDetail from "../components/ChecklistDetail";
+import ChecklistList from "@/src/components/ChecklistList";
+import ChecklistDetail from "@/src/components/ChecklistDetail";
 import styles from "./Taskboard.module.css";
 
 type Page =

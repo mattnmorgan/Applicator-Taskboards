@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import {
-  ChecklistRecord,
-  SectionRecord,
-  ItemRecord,
-  SubscriptionRecord,
-  getChecklistAccess,
-} from "../../_utils";
+import { ChecklistRecord } from "@/src/types/ChecklistRecord";
+import { SectionRecord } from "@/src/types/SectionRecord";
+import { ItemRecord } from "@/src/types/ItemRecord";
+import { SubscriptionRecord } from "@/src/types/SubscriptionRecord";
+import { getChecklistAccess, deleteAllChecklistShares } from "@/src/lib/checklist-access";
 
 // GET /api/tasklist/checklists/:checklistId — full checklist with sections, items, and subscription state
 export async function GET(
@@ -124,7 +122,6 @@ export async function DELETE(
     const sections = context.recordManager<SectionRecord>("tasklist", "section");
     const items = context.recordManager<ItemRecord>("tasklist", "item");
     const subscriptions = context.recordManager<SubscriptionRecord>("tasklist", "subscription");
-    const shares = context.recordManager("tasklist", "share");
 
     // Delete all items
     const itemResult = await items.readRecords({ fields: { checklistId }, limit: 5000 });
@@ -144,11 +141,8 @@ export async function DELETE(
       await subscriptions.bulkDeleteRecords(subResult.records.map((r) => r.id));
     }
 
-    // Delete all shares
-    const shareResult = await shares.readRecords({ fields: { checklistId }, limit: 500 });
-    if (shareResult.records.length > 0) {
-      await shares.bulkDeleteRecords(shareResult.records.map((r: any) => r.id));
-    }
+    // Delete all shares (contextual authorities) for this checklist
+    await deleteAllChecklistShares(context, checklistId);
 
     // Delete the checklist
     const checklists = context.recordManager("tasklist", "checklist");

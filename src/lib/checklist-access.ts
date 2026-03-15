@@ -1,21 +1,13 @@
 import { ApiContext } from "@applicator/sdk/context";
-import { ChecklistRecord } from "../types/ChecklistRecord";
+import { ChecklistRecord } from "@/src/types/ChecklistRecord";
 
 export type AccessLevel = "owner" | "editor" | "viewer";
 
-// Re-export record types for use in API routes
-export type { ChecklistRecord } from "../types/ChecklistRecord";
-export type { SectionRecord } from "../types/SectionRecord";
-export type { ItemRecord } from "../types/ItemRecord";
-export type { SubscriptionRecord } from "../types/SubscriptionRecord";
-
-// Contextual authority recordId format for a checklist's shares
 function checklistRecordId(checklistId: string) {
   return `checklist-${checklistId}`;
 }
 
-// Permission strings encode the access role
-export function sharePermission(checklistId: string, role: "editor" | "viewer") {
+function sharePermission(checklistId: string, role: "editor" | "viewer") {
   return `tasklist:checklist:${checklistId}:${role}`;
 }
 
@@ -83,6 +75,15 @@ export async function createChecklistShare(
 export async function listChecklistShares(context: ApiContext, checklistId: string) {
   const caManager = (context as any).contextualAuthorityManager;
   return caManager.getContextualAuthorities("tasklist", checklistRecordId(checklistId));
+}
+
+/**
+ * Deletes all contextual authorities for a checklist (used when deleting a checklist).
+ */
+export async function deleteAllChecklistShares(context: ApiContext, checklistId: string) {
+  const cas = await listChecklistShares(context, checklistId);
+  const caManager = (context as any).contextualAuthorityManager;
+  await Promise.all(cas.map((ca: any) => caManager.deleteContextualAuthority(ca.id)));
 }
 
 /**

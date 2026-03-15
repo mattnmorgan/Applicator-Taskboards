@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Icon } from "@applicator/sdk/components";
-import styles from "../apps/Taskboard.module.css";
-import { SystemUser } from "../types/SystemUser";
+import styles from "@/src/apps/Taskboard.module.css";
+import { SystemUser } from "@/src/types/SystemUser";
 
 interface ShareEntry {
   id: string;

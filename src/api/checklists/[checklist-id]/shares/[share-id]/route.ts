@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import {
-  getChecklistAccess,
-  createChecklistShare,
-  deleteChecklistShare,
-  listChecklistShares,
-} from "../../../../_utils";
+import { getChecklistAccess, createChecklistShare, deleteChecklistShare, listChecklistShares } from "@/src/lib/checklist-access";
 
 // PATCH /api/tasklist/checklists/:checklistId/shares/:shareId — update role
 // Since contextual authorities are immutable, we delete the old one and create a new one.

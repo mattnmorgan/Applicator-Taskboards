@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Icon } from "@applicator/sdk/components";
-import styles from "../apps/Taskboard.module.css";
-import { ChecklistSummary } from "../types/ChecklistSummary";
+import styles from "@/src/apps/Taskboard.module.css";
+import { ChecklistSummary } from "@/src/types/ChecklistSummary";
 
 interface Props {
   onOpen: (id: string) => void;

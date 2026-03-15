@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { ChecklistRecord, ShareRecord } from "../_utils";
+import { ChecklistRecord } from "@/src/types/ChecklistRecord";
 
 // GET /api/tasklist/checklists — list checklists owned by or shared with the current user
 export async function GET(_req: NextRequest, context: ApiContext) {
@@ -8,23 +8,29 @@ export async function GET(_req: NextRequest, context: ApiContext) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const checklists = context.recordManager<ChecklistRecord>("tasklist", "checklist");
-  const shares = context.recordManager<ShareRecord>("tasklist", "share");
 
   const ownedResult = await checklists.readRecords({ fields: { ownerId: user.id }, limit: 500 });
 
-  const sharedResult = await shares.readRecords({ fields: { userId: user.id }, limit: 500 });
-  const sharedChecklistIds = sharedResult.records.map((r) => r.data.checklistId);
+  // Discover checklists shared with this user via contextual authorities.
+  // We check all owned checklists from other users by scanning CAs where
+  // the user appears. The CA manager exposes this via getUserContextualAuthorities.
+  const caManager = (context as any).contextualAuthorityManager;
+  const userCAs = await caManager.getUserContextualAuthorities("tasklist", user.id);
 
   const sharedChecklists: { id: string; name: string; description: string; ownerId: string; role: string }[] = [];
-  for (const shareRecord of sharedResult.records) {
-    const cl = await checklists.readRecord(shareRecord.data.checklistId);
+  for (const ca of userCAs) {
+    const ctx = ca.data.context ? JSON.parse(ca.data.context) : {};
+    // recordId format: "checklist-{checklistId}"
+    const checklistId = ca.data.recordId?.replace(/^checklist-/, "");
+    if (!checklistId) continue;
+    const cl = await checklists.readRecord(checklistId);
     if (cl) {
       sharedChecklists.push({
         id: cl.id,
         name: cl.data.name,
         description: cl.data.description,
         ownerId: cl.data.ownerId,
-        role: shareRecord.data.role,
+        role: ctx.role,
       });
     }
   }

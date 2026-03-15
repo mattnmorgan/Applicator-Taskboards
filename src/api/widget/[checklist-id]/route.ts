@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { ItemRecord, getChecklistAccess } from "../../_utils";
+import { ItemRecord } from "@/src/types/ItemRecord";
+import { getChecklistAccess } from "@/src/lib/checklist-access";
 
 // GET /api/tasklist/widget/:checklistId?lookahead=24|48|72|168|none
 export async function GET(

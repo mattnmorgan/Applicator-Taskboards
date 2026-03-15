@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Icon } from "@applicator/sdk/components";
-import styles from "../apps/Taskboard.module.css";
-import { ItemData } from "../types/ItemData";
-import { SystemUser } from "../types/SystemUser";
+import styles from "@/src/apps/Taskboard.module.css";
+import { ItemData } from "@/src/types/ItemData";
+import { SystemUser } from "@/src/types/SystemUser";
 
 interface Props {
   item: ItemData;

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import {
-  getChecklistAccess,
-  createChecklistShare,
-  listChecklistShares,
-} from "../../../_utils";
+import { getChecklistAccess, createChecklistShare, listChecklistShares } from "@/src/lib/checklist-access";
 
 // GET /api/tasklist/checklists/:checklistId/shares — list all shares
 export async function GET(

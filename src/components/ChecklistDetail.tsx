@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Icon } from "@applicator/sdk/components";
-import styles from "../apps/Taskboard.module.css";
-import { ChecklistDetail as ChecklistDetailType, SectionData, ItemData } from "../types/ChecklistDetail";
-import { SystemUser } from "../types/SystemUser";
+import styles from "@/src/apps/Taskboard.module.css";
+import { ChecklistDetail as ChecklistDetailType, SectionData, ItemData } from "@/src/types/ChecklistDetail";
+import { SystemUser } from "@/src/types/SystemUser";
 import ChecklistSection from "./ChecklistSection";
 import ShareModal from "./ShareModal";
 

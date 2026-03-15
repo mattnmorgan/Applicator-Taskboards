@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiContext } from "@applicator/sdk/context";
-import { SubscriptionRecord } from "../../_utils";
+import { SubscriptionRecord } from "@/src/types/SubscriptionRecord";
 
 // DELETE /api/tasklist/subscriptions/:subscriptionId — unsubscribe
 export async function DELETE(
