@@ -12,16 +12,17 @@ export async function GET(_req: NextRequest, context: ApiContext) {
   const ownedResult = await checklists.readRecords({ fields: { ownerId: user.id }, limit: 500 });
 
   // Discover checklists shared with this user via contextual authorities.
-  // We check all owned checklists from other users by scanning CAs where
-  // the user appears. The CA manager exposes this via getUserContextualAuthorities.
+  // Query CAs where user = current user and app = "tasklist".
   const caManager = (context as any).contextualAuthorityManager;
-  const userCAs = await caManager.getUserContextualAuthorities("tasklist", user.id);
+  const userCAsResult = await caManager.readRecords({ fields: { user: user.id, app: "tasklist" } });
+  const userCAs = userCAsResult.records;
 
   const sharedChecklists: { id: string; name: string; description: string; ownerId: string; role: string }[] = [];
   for (const ca of userCAs) {
     const ctx = ca.data.context ? JSON.parse(ca.data.context) : {};
-    // recordId format: "checklist-{checklistId}"
-    const checklistId = ca.data.recordId?.replace(/^checklist-/, "");
+    // CA id format: "tasklist:checklist-{checklistId}:user:{userId}"
+    const idMatch = ca.id.match(/^tasklist:checklist-(.+):user:/);
+    const checklistId = idMatch?.[1];
     if (!checklistId) continue;
     const cl = await checklists.readRecord(checklistId);
     if (cl) {

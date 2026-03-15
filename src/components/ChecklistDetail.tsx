@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Icon } from "@applicator/sdk/components";
+import { ButtonIcon, Icon } from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
-import { ChecklistDetail as ChecklistDetailType, SectionData, ItemData } from "@/src/types/ChecklistDetail";
+import { ChecklistDetail as ChecklistDetailType } from "@/src/types/ChecklistDetail";
+import { SectionData } from "@/src/types/SectionData";
+import { ItemData } from "@/src/types/ItemData";
 import { SystemUser } from "@/src/types/SystemUser";
 import ChecklistSection from "./ChecklistSection";
 import ShareModal from "./ShareModal";
@@ -22,6 +24,11 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   // Section drag state
   const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
   const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
+
+  // Item drag state (lifted here for cross-section support)
+  const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
+  const [draggingItemSectionId, setDraggingItemSectionId] = useState<string | null>(null);
+  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -155,14 +162,150 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
     }
   };
 
-  const handleItemsReorder = (sectionId: string, items: ItemData[]) => {
+  // ─── Item drag-and-drop ─────────────────────────────────────
+
+  const clearItemDrag = () => {
+    setDraggingItemId(null);
+    setDraggingItemSectionId(null);
+    setDragOverItemId(null);
+  };
+
+  const handleItemDragStart = (itemId: string, sectionId: string) => {
+    setDraggingItemId(itemId);
+    setDraggingItemSectionId(sectionId);
+  };
+
+  const handleItemDragOver = (e: React.DragEvent, itemId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverItemId(itemId);
+  };
+
+  const handleItemDrop = async (targetItemId: string, targetSectionId: string) => {
+    if (!draggingItemId || !draggingItemSectionId || !checklist) {
+      clearItemDrag();
+      return;
+    }
+    if (draggingItemId === targetItemId) {
+      clearItemDrag();
+      return;
+    }
+
+    if (draggingItemSectionId === targetSectionId) {
+      // Same section: reorder incomplete items
+      const section = checklist.sections.find((s) => s.id === targetSectionId);
+      if (!section) { clearItemDrag(); return; }
+
+      const incomplete = section.items
+        .filter((i) => !i.complete || i.reusable)
+        .sort((a, b) => a.order - b.order);
+
+      const fromIdx = incomplete.findIndex((i) => i.id === draggingItemId);
+      const toIdx = incomplete.findIndex((i) => i.id === targetItemId);
+      if (fromIdx === -1 || toIdx === -1) { clearItemDrag(); return; }
+
+      const newList = [...incomplete];
+      const [moved] = newList.splice(fromIdx, 1);
+      newList.splice(toIdx, 0, moved);
+      const updated = newList.map((item, idx) => ({ ...item, order: idx }));
+
+      // Optimistic update
+      setChecklist((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          sections: prev.sections.map((s) => {
+            if (s.id !== targetSectionId) return s;
+            return {
+              ...s,
+              items: s.items.map((i) => {
+                const u = updated.find((u) => u.id === i.id);
+                return u || i;
+              }),
+            };
+          }),
+        };
+      });
+
+      try {
+        await fetch(`/api/tasklist/sections/${targetSectionId}/items/reorder`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: updated.map((i) => ({ id: i.id, order: i.order })) }),
+        });
+      } catch {}
+    } else {
+      // Cross-section: move item before targetItem in target section
+      await moveItemToSection(draggingItemId, draggingItemSectionId, targetSectionId, targetItemId);
+    }
+
+    clearItemDrag();
+  };
+
+  const handleItemDropOnSection = async (targetSectionId: string) => {
+    if (!draggingItemId || !draggingItemSectionId || draggingItemSectionId === targetSectionId) {
+      clearItemDrag();
+      return;
+    }
+    await moveItemToSection(draggingItemId, draggingItemSectionId, targetSectionId, null);
+    clearItemDrag();
+  };
+
+  const moveItemToSection = async (
+    itemId: string,
+    sourceSectionId: string,
+    targetSectionId: string,
+    beforeItemId: string | null,
+  ) => {
+    if (!checklist) return;
+    const sourceSection = checklist.sections.find((s) => s.id === sourceSectionId);
+    const targetSection = checklist.sections.find((s) => s.id === targetSectionId);
+    if (!sourceSection || !targetSection) return;
+
+    const movingItem = sourceSection.items.find((i) => i.id === itemId);
+    if (!movingItem) return;
+
+    const targetIncomplete = targetSection.items
+      .filter((i) => !i.complete || i.reusable)
+      .sort((a, b) => a.order - b.order);
+
+    let toIdx = beforeItemId
+      ? targetIncomplete.findIndex((i) => i.id === beforeItemId)
+      : targetIncomplete.length;
+    if (toIdx === -1) toIdx = targetIncomplete.length;
+
+    const newList = [...targetIncomplete];
+    newList.splice(toIdx, 0, { ...movingItem, sectionId: targetSectionId });
+    const reordered = newList.map((item, idx) => ({ ...item, order: idx }));
+
     setChecklist((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        sections: prev.sections.map((s) => (s.id === sectionId ? { ...s, items } : s)),
+        sections: prev.sections.map((s) => {
+          if (s.id === sourceSectionId) {
+            return { ...s, items: s.items.filter((i) => i.id !== itemId) };
+          }
+          if (s.id === targetSectionId) {
+            const completeItems = s.items.filter((i) => i.complete && !i.reusable);
+            return { ...s, items: [...reordered, ...completeItems] };
+          }
+          return s;
+        }),
       };
     });
+
+    try {
+      await fetch(`/api/tasklist/items/${itemId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sectionId: targetSectionId, order: toIdx }),
+      });
+    } catch {}
+  };
+
+  const handleItemDragEnd = () => {
+    clearItemDrag();
   };
 
   // ─── Section handlers ───────────────────────────────────────
@@ -280,24 +423,24 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
         </div>
 
         <div className={styles.headerActions}>
-          {/* Watch checklist */}
-          <button
-            className={`${styles.iconBtn} ${checklist.subscribed ? styles.active : ""}`}
+          <ButtonIcon
+            name="eye"
+            iconSize={16}
+            label={checklist.subscribed ? "Unwatch checklist" : "Watch checklist for notifications"}
             onClick={toggleChecklistSubscription}
-            title={checklist.subscribed ? "Unwatch checklist" : "Watch checklist for notifications"}
-          >
-            <Icon name="eye" size={16} />
-          </button>
+            active={checklist.subscribed}
+            subvariant="info"
+            placement="bottom"
+          />
 
-          {/* Share settings (owner only) */}
           {checklist.access === "owner" && (
-            <button
-              className={styles.iconBtn}
+            <ButtonIcon
+              name="settings"
+              iconSize={16}
+              label="Share settings"
               onClick={() => setShowShareModal(true)}
-              title="Share settings"
-            >
-              <Icon name="settings" size={16} />
-            </button>
+              placement="bottom"
+            />
           )}
         </div>
       </div>
@@ -325,7 +468,13 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
               onItemDelete={handleItemDelete}
               onItemAdd={handleItemAdd}
               onItemSubscriptionToggle={toggleItemSubscription}
-              onItemsReorder={handleItemsReorder}
+              draggingItemId={draggingItemId}
+              dragOverItemId={dragOverItemId}
+              onItemDragStart={(itemId) => handleItemDragStart(itemId, section.id)}
+              onItemDragOver={handleItemDragOver}
+              onItemDrop={(targetItemId) => handleItemDrop(targetItemId, section.id)}
+              onItemDragEnd={handleItemDragEnd}
+              onItemDropOnSection={() => handleItemDropOnSection(section.id)}
               dragOver={dragOverSectionId === section.id}
               draggingSection={draggingSectionId === section.id}
               onDragStart={(e) => handleSectionDragStart(e, section.id)}

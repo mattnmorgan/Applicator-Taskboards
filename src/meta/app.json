@@ -30,7 +30,7 @@
         {
           "name": "ownerId",
           "type": "relationship",
-          "relatedTo": "system:user",
+          "relatedTo": "system:users",
           "required": true,
           "description": "User who owns the checklist"
         }
@@ -88,7 +88,7 @@
         {
           "name": "assigneeId",
           "type": "relationship",
-          "relatedTo": "system:user",
+          "relatedTo": "system:users",
           "description": "Assigned user"
         },
         {
@@ -120,7 +120,7 @@
         {
           "name": "userId",
           "type": "relationship",
-          "relatedTo": "system:user",
+          "relatedTo": "system:users",
           "required": true,
           "description": "Subscribing user"
         },
@@ -264,14 +264,14 @@
   "applets": [
     {
       "id": "main",
-      "label": "Tasklist",
+      "label": "Taskboards",
       "description": "Main checklisting application",
       "target": "app",
       "component": "Taskboard"
     },
     {
       "id": "widget",
-      "label": "Checklist Widget",
+      "label": "Checklist",
       "description": "Shows upcoming items for a single checklist on the homescreen",
       "target": "home",
       "component": "TaskboardWidget",

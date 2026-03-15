@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Icon } from "@applicator/sdk/components";
+import { ButtonIcon, Icon } from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
 import { ItemData } from "@/src/types/ItemData";
 import { SystemUser } from "@/src/types/SystemUser";
@@ -160,7 +160,7 @@ export default function ChecklistItem({
       if (res.ok) {
         onUpdate(item.id, {
           assigneeId: userId,
-          assigneeName: user?.displayName || null,
+          assigneeName: user?.displayName || undefined,
         });
       }
     } catch {}
@@ -184,14 +184,17 @@ export default function ChecklistItem({
   return (
     <div
       className={`${styles.item} ${item.complete ? styles.complete : ""} ${dragOver ? styles.dragOver : ""}`}
-      draggable
-      onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDrop={onDrop}
-      onDragEnd={onDragEnd}
     >
-      {/* Drag handle */}
-      <span className={styles.itemDragHandle}>
+      {/* Drag handle — only draggable for incomplete (or reusable) items */}
+      <span
+        className={styles.itemDragHandle}
+        draggable={!item.complete || item.reusable}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        style={{ cursor: (!item.complete || item.reusable) ? "grab" : "default" }}
+      >
         <Icon name="drag" size={12} />
       </span>
 
@@ -296,57 +299,62 @@ export default function ChecklistItem({
 
       {/* Action buttons (visible on hover) */}
       <div className={styles.itemActions}>
-        {/* Assign button (only if no assignee yet) */}
         {!item.assigneeId && canAssign && (
-          <button
-            className={styles.itemActionBtn}
+          <ButtonIcon
+            name="user"
+            iconSize={13}
+            label="Assign user"
             onClick={() => setShowAssigneePicker(true)}
-            title="Assign user"
-          >
-            <Icon name="user" size={13} />
-          </button>
+            size="sm"
+            placement="top"
+          />
         )}
 
-        {/* Set due date (if no due date) */}
         {(item.dueDate === null || item.dueDate === "") && canEdit && (
-          <button
-            className={styles.itemActionBtn}
+          <ButtonIcon
+            name="calendar"
+            iconSize={13}
+            label="Set due date"
             onClick={() => setEditingDate(true)}
-            title="Set due date"
-          >
-            <Icon name="calendar" size={13} />
-          </button>
+            size="sm"
+            placement="top"
+          />
         )}
 
-        {/* Reusable toggle */}
         {canEdit && (
-          <button
-            className={`${styles.itemActionBtn} ${item.reusable ? styles.reusableActive : ""}`}
+          <ButtonIcon
+            name="refresh"
+            iconSize={13}
+            label={item.reusable ? "Disable reusable" : "Make reusable (stays after completion)"}
             onClick={toggleReusable}
-            title={item.reusable ? "Disable reusable" : "Make reusable (stays after completion)"}
-          >
-            <Icon name="refresh" size={13} />
-          </button>
+            size="sm"
+            placement="top"
+            active={item.reusable}
+            subvariant="info"
+          />
         )}
 
-        {/* Watch/subscribe toggle */}
-        <button
-          className={`${styles.itemActionBtn} ${item.subscribed ? styles.watchActive : ""}`}
+        <ButtonIcon
+          name="eye"
+          iconSize={14}
+          label={item.subscribed ? "Unwatch item" : "Watch item for notifications"}
           onClick={() => onToggleSubscription(item)}
-          title={item.subscribed ? "Unwatch item" : "Watch item for notifications"}
-        >
-          <Icon name="eye" size={14} />
-        </button>
+          size="sm"
+          placement="top"
+          active={item.subscribed}
+          subvariant="info"
+        />
 
-        {/* Delete */}
         {canEdit && (
-          <button
-            className={`${styles.itemActionBtn} ${styles.deleteAction}`}
+          <ButtonIcon
+            name="trash"
+            iconSize={13}
+            label="Delete item"
             onClick={() => onDelete(item.id)}
-            title="Delete item"
-          >
-            <Icon name="trash" size={13} />
-          </button>
+            size="sm"
+            placement="top"
+            subvariant="danger"
+          />
         )}
       </div>
     </div>

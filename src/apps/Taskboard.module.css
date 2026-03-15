@@ -299,7 +299,7 @@
 }
 
 .dragHandle {
-  color: #475569;
+  color: #64748b;
   cursor: grab;
   padding: 4px;
   display: flex;
@@ -339,6 +339,20 @@
   transition: opacity 0.15s;
 }
 
+.sectionCollapseChevron {
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: color 0.15s, transform 0.2s;
+  padding: 2px;
+}
+
+.sectionCollapseChevron:hover {
+  color: #94a3b8;
+}
+
 .sectionItems {
   padding: 4px 0;
 }
@@ -372,11 +386,11 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px 6px 8px;
+  padding: 3px 12px 3px 8px;
   border-radius: 6px;
   transition: background 0.12s;
   position: relative;
-  min-height: 36px;
+  min-height: 30px;
 }
 
 .item:hover {
@@ -393,7 +407,7 @@
 }
 
 .itemDragHandle {
-  color: #334155;
+  color: #64748b;
   cursor: grab;
   opacity: 0;
   transition: opacity 0.15s;
@@ -554,7 +568,7 @@
   justify-content: center;
   background: none;
   border: none;
-  color: #475569;
+  color: #64748b;
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -595,7 +609,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  color: #475569;
+  color: #64748b;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -636,7 +650,7 @@
   border: 1px solid #3b82f6;
   color: #e2e8f0;
   border-radius: 6px;
-  padding: 5px 10px;
+  padding: 8px 10px;
   font-size: 13px;
   outline: none;
 }

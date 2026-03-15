@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Icon } from "@applicator/sdk/components";
+import { ButtonIcon, Icon } from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
 import { ChecklistSummary } from "@/src/types/ChecklistSummary";
 
@@ -58,8 +58,7 @@ export default function ChecklistList({ onOpen }: Props) {
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
+  const handleDelete = async (id: string) => {
     if (!confirm("Delete this checklist and all its content?")) return;
     setDeletingId(id);
     try {
@@ -104,15 +103,17 @@ export default function ChecklistList({ onOpen }: Props) {
                   )}
                   <div
                     className={styles.checklistCardDelete}
-                    onClick={(e) => handleDelete(e, cl.id)}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <button
-                      className={styles.deleteBtn}
+                    <ButtonIcon
+                      name="trash"
+                      iconSize={14}
+                      label="Delete checklist"
+                      onClick={() => handleDelete(cl.id)}
                       disabled={deletingId === cl.id}
-                      title="Delete checklist"
-                    >
-                      <Icon name="trash" size={14} />
-                    </button>
+                      subvariant="danger"
+                      placement="top"
+                    />
                   </div>
                 </div>
               ))}

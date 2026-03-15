@@ -54,6 +54,7 @@ export async function PATCH(
     }
     if (body.order !== undefined) updates.order = body.order;
     if (body.assigneeId !== undefined) updates.assigneeId = body.assigneeId;
+    if (body.sectionId !== undefined) updates.sectionId = body.sectionId;
 
     const table = await itemManager.getTable();
     const updated = await itemManager.updateRecord(table, itemId, updates);

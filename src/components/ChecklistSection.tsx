@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useCallback } from "react";
-import { Icon } from "@applicator/sdk/components";
+import { ButtonIcon, Icon } from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
 import { SectionData } from "@/src/types/SectionData";
 import { ItemData } from "@/src/types/ItemData";
@@ -19,7 +19,15 @@ interface Props {
   onItemDelete: (id: string) => void;
   onItemAdd: (sectionId: string, title: string) => void;
   onItemSubscriptionToggle: (item: ItemData) => void;
-  onItemsReorder: (sectionId: string, items: ItemData[]) => void;
+  // Item drag state (lifted to ChecklistDetail for cross-section support)
+  draggingItemId: string | null;
+  dragOverItemId: string | null;
+  onItemDragStart: (itemId: string) => void;
+  onItemDragOver: (e: React.DragEvent, itemId: string) => void;
+  onItemDrop: (targetItemId: string) => void;
+  onItemDragEnd: () => void;
+  onItemDropOnSection: () => void;
+  // Section drag
   dragOver: boolean;
   draggingSection: boolean;
   onDragStart: (e: React.DragEvent) => void;
@@ -39,27 +47,30 @@ export default function ChecklistSection({
   onItemDelete,
   onItemAdd,
   onItemSubscriptionToggle,
-  onItemsReorder,
+  draggingItemId,
+  dragOverItemId,
+  onItemDragStart,
+  onItemDragOver,
+  onItemDrop,
+  onItemDragEnd,
+  onItemDropOnSection,
   dragOver,
-  draggingSection,
   onDragStart,
   onDragOver,
   onDrop,
   onDragEnd,
 }: Props) {
+  const [collapsed, setCollapsed] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(section.name);
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItemTitle, setNewItemTitle] = useState("");
   const [showCompleted, setShowCompleted] = useState(false);
-  const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
-  const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
-  const [dragGroup, setDragGroup] = useState<"incomplete" | "complete" | null>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const canEdit = access === "owner" || access === "editor";
 
-  const incompleteItems = section.items.filter((i) => !i.complete).sort((a, b) => a.order - b.order);
-  const completeItems = section.items.filter((i) => i.complete).sort((a, b) => a.order - b.order);
+  const incompleteItems = section.items.filter((i) => !i.complete || i.reusable).sort((a, b) => a.order - b.order);
+  const completeItems = section.items.filter((i) => i.complete && !i.reusable).sort((a, b) => a.order - b.order);
 
   const saveName = useCallback(async () => {
     const trimmed = nameValue.trim();
@@ -93,83 +104,44 @@ export default function ChecklistSection({
     onItemAdd(section.id, title);
   };
 
-  const handleDeleteSection = () => {
-    if (!confirm(`Delete section "${section.name}" and all its items?`)) return;
-    onSectionDelete(section.id);
-  };
-
-  // ─── Item drag-and-drop ──────────────────────────────────────
-
-  const handleItemDragStart = (itemId: string, group: "incomplete" | "complete") => {
-    setDraggingItemId(itemId);
-    setDragGroup(group);
-  };
-
-  const handleItemDragOver = (e: React.DragEvent, itemId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOverItemId(itemId);
-  };
-
-  const handleItemDrop = async (targetId: string, targetGroup: "incomplete" | "complete") => {
-    if (!draggingItemId || draggingItemId === targetId) {
-      setDraggingItemId(null);
-      setDragOverItemId(null);
-      setDragGroup(null);
-      return;
+  const handleSectionDrop = (e: React.DragEvent) => {
+    // If an item is being dragged, treat this as dropping the item onto the section
+    if (draggingItemId) {
+      e.preventDefault();
+      e.stopPropagation();
+      onItemDropOnSection();
+    } else {
+      onDrop(e);
     }
-
-    const sourceList = dragGroup === "incomplete" ? incompleteItems : completeItems;
-    const targetList = targetGroup === "incomplete" ? incompleteItems : completeItems;
-
-    const fromIndex = sourceList.findIndex((i) => i.id === draggingItemId);
-    const toIndex = targetList.findIndex((i) => i.id === targetId);
-    if (fromIndex === -1) return;
-
-    if (dragGroup === targetGroup) {
-      // Reorder within same group
-      const newList = [...sourceList];
-      const [moved] = newList.splice(fromIndex, 1);
-      newList.splice(toIndex, 0, moved);
-      const updated = newList.map((item, idx) => ({ ...item, order: idx }));
-
-      // Optimistic update
-      const allItems = section.items.map((i) => {
-        const u = updated.find((u) => u.id === i.id);
-        return u || i;
-      });
-      onItemsReorder(section.id, allItems);
-
-      // Persist
-      try {
-        await fetch(`/api/tasklist/sections/${section.id}/items/reorder`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: updated.map((i) => ({ id: i.id, order: i.order })) }),
-        });
-      } catch {}
-    }
-    // Cross-group drag (incomplete ↔ complete) handled via checkbox; skip
-
-    setDraggingItemId(null);
-    setDragOverItemId(null);
-    setDragGroup(null);
   };
 
-  const handleItemDragEnd = () => {
-    setDraggingItemId(null);
-    setDragOverItemId(null);
-    setDragGroup(null);
+  const handleSectionDragOver = (e: React.DragEvent) => {
+    if (draggingItemId) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      onDragOver(e);
+    }
   };
 
   return (
     <div
-      className={`${styles.section} ${dragOver ? styles.dragOver : ""}`}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      className={`${styles.section} ${dragOver && !draggingItemId ? styles.dragOver : ""}`}
+      onDragOver={handleSectionDragOver}
+      onDrop={handleSectionDrop}
     >
       {/* Section header */}
       <div className={styles.sectionHeader}>
+        {/* Collapse toggle */}
+        <span
+          className={styles.sectionCollapseChevron}
+          onClick={() => setCollapsed((v) => !v)}
+          title={collapsed ? "Expand section" : "Collapse section"}
+          style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+        >
+          <Icon name="chevron-down" size={13} />
+        </span>
+
         {/* Section drag handle */}
         {canEdit && (
           <span
@@ -202,101 +174,105 @@ export default function ChecklistSection({
         />
 
         {canEdit && (
-          <button
-            className={`${styles.iconBtn} ${styles.sectionDeleteBtn}`}
-            onClick={handleDeleteSection}
-            title="Delete section"
-          >
-            <Icon name="trash" size={14} />
-          </button>
+          <ButtonIcon
+            name="trash"
+            iconSize={13}
+            label="Delete section"
+            onClick={() => onSectionDelete(section.id)}
+            size="sm"
+            subvariant="danger"
+            placement="top"
+          />
         )}
       </div>
 
-      {/* Incomplete items */}
-      <div className={styles.sectionItems}>
-        {incompleteItems.map((item) => (
-          <ChecklistItem
-            key={item.id}
-            item={item}
-            access={access}
-            currentUserId={currentUserId}
-            users={users}
-            onUpdate={onItemUpdate}
-            onDelete={onItemDelete}
-            onToggleSubscription={onItemSubscriptionToggle}
-            dragging={draggingItemId === item.id}
-            dragOver={dragOverItemId === item.id}
-            onDragStart={() => handleItemDragStart(item.id, "incomplete")}
-            onDragOver={(e) => handleItemDragOver(e, item.id)}
-            onDrop={() => handleItemDrop(item.id, "incomplete")}
-            onDragEnd={handleItemDragEnd}
-          />
-        ))}
-
-        {/* Add item row */}
-        {canEdit && !showAddItem && (
-          <div className={styles.addItemRow}>
-            <button className={styles.addItemBtn} onClick={() => setShowAddItem(true)}>
-              <Icon name="plus" size={12} /> Add item
-            </button>
-          </div>
-        )}
-        {showAddItem && (
-          <div className={styles.newItemRow}>
-            <input
-              className={styles.newItemInput}
-              placeholder="Item title…"
-              value={newItemTitle}
-              autoFocus
-              onChange={(e) => setNewItemTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddItem();
-                if (e.key === "Escape") { setShowAddItem(false); setNewItemTitle(""); }
-              }}
+      {/* Section body — hidden when collapsed */}
+      {!collapsed && (
+        <div className={styles.sectionItems}>
+          {incompleteItems.map((item) => (
+            <ChecklistItem
+              key={item.id}
+              item={item}
+              access={access}
+              currentUserId={currentUserId}
+              users={users}
+              onUpdate={onItemUpdate}
+              onDelete={onItemDelete}
+              onToggleSubscription={onItemSubscriptionToggle}
+              dragging={draggingItemId === item.id}
+              dragOver={dragOverItemId === item.id}
+              onDragStart={() => onItemDragStart(item.id)}
+              onDragOver={(e) => onItemDragOver(e, item.id)}
+              onDrop={() => onItemDrop(item.id)}
+              onDragEnd={onItemDragEnd}
             />
-            <div className={styles.newItemActions}>
-              <button className={styles.newItemSave} onClick={handleAddItem}>Add</button>
-              <button className={styles.newItemCancel} onClick={() => { setShowAddItem(false); setNewItemTitle(""); }}>
-                Cancel
+          ))}
+
+          {/* Add item row */}
+          {canEdit && !showAddItem && (
+            <div className={styles.addItemRow}>
+              <button className={styles.addItemBtn} onClick={() => setShowAddItem(true)}>
+                <Icon name="plus" size={12} /> Add item
               </button>
             </div>
-          </div>
-        )}
-
-        {/* Completed items toggle */}
-        {completeItems.length > 0 && (
-          <>
-            <button
-              className={styles.completedToggle}
-              onClick={() => setShowCompleted((v) => !v)}
-            >
-              <span className={`${styles.completedToggleChevron} ${showCompleted ? styles.open : ""}`}>
-                <Icon name="chevron-right" size={10} />
-              </span>
-              {completeItems.length} completed
-            </button>
-
-            {showCompleted && completeItems.map((item) => (
-              <ChecklistItem
-                key={item.id}
-                item={item}
-                access={access}
-                currentUserId={currentUserId}
-                users={users}
-                onUpdate={onItemUpdate}
-                onDelete={onItemDelete}
-                onToggleSubscription={onItemSubscriptionToggle}
-                dragging={draggingItemId === item.id}
-                dragOver={dragOverItemId === item.id}
-                onDragStart={() => handleItemDragStart(item.id, "complete")}
-                onDragOver={(e) => handleItemDragOver(e, item.id)}
-                onDrop={() => handleItemDrop(item.id, "complete")}
-                onDragEnd={handleItemDragEnd}
+          )}
+          {showAddItem && (
+            <div className={styles.newItemRow}>
+              <input
+                className={styles.newItemInput}
+                placeholder="Item title…"
+                value={newItemTitle}
+                autoFocus
+                onChange={(e) => setNewItemTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddItem();
+                  if (e.key === "Escape") { setShowAddItem(false); setNewItemTitle(""); }
+                }}
               />
-            ))}
-          </>
-        )}
-      </div>
+              <div className={styles.newItemActions}>
+                <button className={styles.newItemSave} onClick={handleAddItem}>Add</button>
+                <button className={styles.newItemCancel} onClick={() => { setShowAddItem(false); setNewItemTitle(""); }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Completed items toggle */}
+          {completeItems.length > 0 && (
+            <>
+              <button
+                className={styles.completedToggle}
+                onClick={() => setShowCompleted((v) => !v)}
+              >
+                <span className={`${styles.completedToggleChevron} ${showCompleted ? styles.open : ""}`}>
+                  <Icon name="chevron-right" size={10} />
+                </span>
+                {completeItems.length} completed
+              </button>
+
+              {showCompleted && completeItems.map((item) => (
+                <ChecklistItem
+                  key={item.id}
+                  item={item}
+                  access={access}
+                  currentUserId={currentUserId}
+                  users={users}
+                  onUpdate={onItemUpdate}
+                  onDelete={onItemDelete}
+                  onToggleSubscription={onItemSubscriptionToggle}
+                  dragging={false}
+                  dragOver={false}
+                  onDragStart={() => {}}
+                  onDragOver={() => {}}
+                  onDrop={() => {}}
+                  onDragEnd={() => {}}
+                />
+              ))}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
