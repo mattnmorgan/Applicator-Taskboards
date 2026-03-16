@@ -43,7 +43,6 @@ export default function ChecklistItem({
   const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
   const isViewer = access === "viewer";
@@ -59,18 +58,6 @@ export default function ChecklistItem({
     setDateValue(item.dueDate || "");
   }, [item.dueDate, item.reusable]);
 
-  // Close assignee picker on outside click
-  useEffect(() => {
-    if (!showAssigneePicker) return;
-    const handler = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setShowAssigneePicker(false);
-        setPickerPos(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [showAssigneePicker]);
 
   const openAssigneePicker = (e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -275,6 +262,7 @@ export default function ChecklistItem({
             className={getDueBadgeClass()}
             onClick={() => { if (canEdit) setEditingDate(true); }}
             title={canEdit ? "Click to edit" : undefined}
+            style={{ cursor: canEdit ? "pointer" : "default" }}
           >
             {item.reusable ? item.dueDate : formatDate(item.dueDate)}
           </div>
@@ -343,16 +331,18 @@ export default function ChecklistItem({
           />
         )}
 
-        <ButtonIcon
-          name="eye"
-          iconSize={14}
-          label={item.subscribed ? "Unwatch item" : "Watch item for notifications"}
-          onClick={() => onToggleSubscription(item)}
-          size="sm"
-          placement="top"
-          active={item.subscribed}
-          subvariant="info"
-        />
+        {(!item.complete || item.reusable) && (
+          <ButtonIcon
+            name="eye"
+            iconSize={14}
+            label={item.subscribed ? "Unwatch item" : "Watch item for notifications"}
+            onClick={() => onToggleSubscription(item)}
+            size="sm"
+            placement="top"
+            active={item.subscribed}
+            subvariant="info"
+          />
+        )}
 
         {canEdit && (
           <ButtonIcon
@@ -369,17 +359,22 @@ export default function ChecklistItem({
 
       {/* Assignee picker — fixed-positioned to avoid off-screen issues */}
       {showAssigneePicker && canAssign && pickerPos && (
-        <div
-          ref={pickerRef}
-          className={styles.assigneePickerWrapper}
-          style={{
-            position: "fixed",
-            top: pickerPos.top,
-            left: pickerPos.left,
-            zIndex: 200,
-            width: 240,
-          }}
-        >
+        <>
+          {/* Backdrop closes picker when clicking outside */}
+          <div
+            style={{ position: "fixed", inset: 0, zIndex: 199 }}
+            onMouseDown={() => { setShowAssigneePicker(false); setPickerPos(null); }}
+          />
+          <div
+            className={styles.assigneePickerWrapper}
+            style={{
+              position: "fixed",
+              top: pickerPos.top,
+              left: pickerPos.left,
+              zIndex: 200,
+              width: 240,
+            }}
+          >
           <SearchableCombobox<SystemUser>
             items={users}
             selectedItems={item.assigneeId ? users.filter((u) => u.id === item.assigneeId) : []}
@@ -414,7 +409,8 @@ export default function ChecklistItem({
               Remove assignee
             </div>
           )}
-        </div>
+          </div>
+        </>
       )}
     </div>
   );
