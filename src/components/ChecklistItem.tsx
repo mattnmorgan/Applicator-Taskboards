@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { ButtonIcon, Icon, SearchableCombobox, Tooltip } from "@applicator/sdk/components";
+import {
+  ButtonIcon,
+  Icon,
+  SearchableCombobox,
+  Tooltip,
+} from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
 import { ItemData } from "@/src/types/ItemData";
 import { SystemUser } from "@/src/types/SystemUser";
@@ -11,7 +16,10 @@ interface Props {
   access: "owner" | "editor" | "viewer";
   currentUserId: string;
   users: SystemUser[];
-  onUpdate: (id: string, updates: Partial<ItemData & { assigneeName?: string }>) => void;
+  onUpdate: (
+    id: string,
+    updates: Partial<ItemData & { assigneeName?: string }>,
+  ) => void;
   onDelete: (id: string) => void;
   onToggleSubscription: (item: ItemData) => void;
   dragOver: boolean;
@@ -40,13 +48,19 @@ export default function ChecklistItem({
   const [editingDate, setEditingDate] = useState(false);
   const [dateValue, setDateValue] = useState(item.dueDate || "");
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
-  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null);
+  const [pickerPos, setPickerPos] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
   const isViewer = access === "viewer";
-  const canEdit = access === "owner" || access === "editor" || item.assigneeId === currentUserId;
+  const canEdit =
+    access === "owner" ||
+    access === "editor" ||
+    item.assigneeId === currentUserId;
   const canAssign = access === "owner" || access === "editor";
   const isDraggable = !isViewer && (!item.complete || item.reusable);
 
@@ -58,11 +72,13 @@ export default function ChecklistItem({
     setDateValue(item.dueDate || "");
   }, [item.dueDate, item.reusable]);
 
-
   const openAssigneePicker = (e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const width = 240;
-    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    const left = Math.max(
+      8,
+      Math.min(rect.left, window.innerWidth - width - 8),
+    );
     const top = rect.bottom + 4;
     setPickerPos({ top, left });
     setShowAssigneePicker(true);
@@ -175,7 +191,10 @@ export default function ChecklistItem({
     if (!d) return "";
     const date = new Date(d + "T00:00:00");
     if (isNaN(date.getTime())) return d;
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
   };
 
   return (
@@ -218,7 +237,9 @@ export default function ChecklistItem({
         value={editingTitle ? titleValue : item.title}
         readOnly={!editingTitle || !canEdit}
         style={{ cursor: canEdit ? undefined : "default" }}
-        onMouseDown={(e) => { if (!canEdit) e.preventDefault(); }}
+        onMouseDown={(e) => {
+          if (!canEdit) e.preventDefault();
+        }}
         onFocus={() => {
           if (canEdit) {
             setEditingTitle(true);
@@ -231,7 +252,10 @@ export default function ChecklistItem({
           if (titleRef.current) titleRef.current.scrollLeft = 0;
         }}
         onKeyDown={(e) => {
-          if (e.key === "Enter") { e.preventDefault(); saveTitle(); }
+          if (e.key === "Enter") {
+            e.preventDefault();
+            saveTitle();
+          }
           if (e.key === "Escape") {
             setTitleValue(item.title);
             setEditingTitle(false);
@@ -260,7 +284,9 @@ export default function ChecklistItem({
         {item.dueDate !== null && item.dueDate !== "" && !editingDate && (
           <div
             className={getDueBadgeClass()}
-            onClick={() => { if (canEdit) setEditingDate(true); }}
+            onClick={() => {
+              if (canEdit) setEditingDate(true);
+            }}
             title={canEdit ? "Click to edit" : undefined}
             style={{ cursor: canEdit ? "pointer" : "default" }}
           >
@@ -278,8 +304,14 @@ export default function ChecklistItem({
             onChange={(e) => setDateValue(e.target.value)}
             onBlur={saveDate}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); saveDate(); }
-              if (e.key === "Escape") { setDateValue(item.dueDate || ""); setEditingDate(false); }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                saveDate();
+              }
+              if (e.key === "Escape") {
+                setDateValue(item.dueDate || "");
+                setEditingDate(false);
+              }
             }}
           />
         )}
@@ -287,7 +319,7 @@ export default function ChecklistItem({
 
       {/* Action buttons (visible on hover) */}
       <div ref={actionsRef} className={styles.itemActions}>
-        {!item.assigneeId && canAssign && (
+        {!item.assigneeId && canAssign && !item.complete && (
           <ButtonIcon
             name="user"
             iconSize={13}
@@ -297,7 +329,10 @@ export default function ChecklistItem({
               const width = 240;
               const top = rect ? rect.bottom + 4 : window.innerHeight / 2;
               const left = rect
-                ? Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))
+                ? Math.max(
+                    8,
+                    Math.min(rect.right - width, window.innerWidth - width - 8),
+                  )
                 : window.innerWidth / 2 - width / 2;
               setPickerPos({ top, left: Math.max(8, left) });
               setShowAssigneePicker(true);
@@ -307,22 +342,28 @@ export default function ChecklistItem({
           />
         )}
 
-        {(item.dueDate === null || item.dueDate === "") && canEdit && (
-          <ButtonIcon
-            name="calendar"
-            iconSize={13}
-            label="Set due date"
-            onClick={() => setEditingDate(true)}
-            size="sm"
-            placement="top"
-          />
-        )}
+        {(item.dueDate === null || item.dueDate === "") &&
+          canEdit &&
+          !item.complete && (
+            <ButtonIcon
+              name="calendar"
+              iconSize={13}
+              label="Set due date"
+              onClick={() => setEditingDate(true)}
+              size="sm"
+              placement="top"
+            />
+          )}
 
-        {canEdit && (
+        {canEdit && (!item.complete || item.reusable) && (
           <ButtonIcon
             name="refresh"
             iconSize={13}
-            label={item.reusable ? "Disable reusable" : "Make reusable (stays after completion)"}
+            label={
+              item.reusable
+                ? "Disable reusable"
+                : "Make reusable (stays after completion)"
+            }
             onClick={toggleReusable}
             size="sm"
             placement="top"
@@ -335,7 +376,9 @@ export default function ChecklistItem({
           <ButtonIcon
             name="eye"
             iconSize={14}
-            label={item.subscribed ? "Unwatch item" : "Watch item for notifications"}
+            label={
+              item.subscribed ? "Unwatch item" : "Watch item for notifications"
+            }
             onClick={() => onToggleSubscription(item)}
             size="sm"
             placement="top"
@@ -363,7 +406,10 @@ export default function ChecklistItem({
           {/* Backdrop closes picker when clicking outside */}
           <div
             style={{ position: "fixed", inset: 0, zIndex: 199 }}
-            onMouseDown={() => { setShowAssigneePicker(false); setPickerPos(null); }}
+            onMouseDown={() => {
+              setShowAssigneePicker(false);
+              setPickerPos(null);
+            }}
           />
           <div
             className={styles.assigneePickerWrapper}
@@ -375,40 +421,62 @@ export default function ChecklistItem({
               width: 240,
             }}
           >
-          <SearchableCombobox<SystemUser>
-            items={users}
-            selectedItems={item.assigneeId ? users.filter((u) => u.id === item.assigneeId) : []}
-            onSelectionChange={(selected) => {
-              if (selected.length > 0) {
-                setAssignee(selected[0].id);
-              } else {
-                // Deselect in single-select mode — close without change
-                setShowAssigneePicker(false);
-                setPickerPos(null);
+            <SearchableCombobox<SystemUser>
+              items={users}
+              selectedItems={[]}
+              onSelectionChange={(selected) => {
+                if (selected.length > 0) {
+                  setAssignee(selected[0].id);
+                }
+              }}
+              renderItem={(u) => (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    fontSize: 11,
+                    color: "#e2e8f0",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 16,
+                      height: 16,
+                      minWidth: 16,
+                      minHeight: 16,
+                      borderRadius: "50%",
+                      background: "#3b82f6",
+                      color: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "9px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {(u.displayName || u.username || "?")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+                  <div>{u.displayName}</div>
+                </div>
+              )}
+              filterItem={(u, term) =>
+                u.displayName.toLowerCase().includes(term.toLowerCase()) ||
+                u.username.toLowerCase().includes(term.toLowerCase())
               }
-            }}
-            renderItem={(u) => (
-              <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#e2e8f0" }}>
-                <span style={{
-                  width: 16, height: 16, borderRadius: "50%", background: "#3b82f6", color: "#fff",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 9, fontWeight: 600, flexShrink: 0,
-                }}>{u.displayName.charAt(0).toUpperCase()}</span>
-                {u.displayName}
-              </span>
+              getItemKey={(u) => u.id}
+              placeholder="Search users..."
+            />
+            {item.assigneeId && (
+              <div
+                className={styles.assigneePickerClear}
+                onClick={() => setAssignee(null)}
+              >
+                Remove assignee
+              </div>
             )}
-            filterItem={(u, term) =>
-              u.displayName.toLowerCase().includes(term.toLowerCase()) ||
-              u.username.toLowerCase().includes(term.toLowerCase())
-            }
-            getItemKey={(u) => u.id}
-            placeholder="Search users..."
-          />
-          {item.assigneeId && (
-            <div className={styles.assigneePickerClear} onClick={() => setAssignee(null)}>
-              Remove assignee
-            </div>
-          )}
           </div>
         </>
       )}

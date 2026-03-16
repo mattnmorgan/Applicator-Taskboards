@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Icon } from "@applicator/sdk/components";
+import { Icon, Tooltip } from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
 
 interface WidgetItem {
@@ -138,13 +138,17 @@ export default function TaskboardWidget({ settings }: Props) {
           <span style={{ fontSize: 11, color: "#475569" }}>
             {lookahead === "none" ? "All" : `${lookahead}h`}
           </span>
-          <button
-            className={`${styles.widgetToggleBtn} ${showNoDueDate ? styles.widgetToggleBtnActive : ""}`}
-            onClick={() => setShowNoDueDate((v) => !v)}
-            title={showNoDueDate ? "Hide items without due date" : "Show items without due date"}
+          <Tooltip
+            text={showNoDueDate ? "Hide items without dates" : "Display items without dates"}
+            placement="bottom"
           >
-            <Icon name={showNoDueDate ? "eye" : "eye-off"} size={13} />
-          </button>
+            <button
+              className={`${styles.widgetToggleBtn} ${showNoDueDate ? styles.widgetToggleBtnActive : ""}`}
+              onClick={() => setShowNoDueDate((v) => !v)}
+            >
+              <Icon name={showNoDueDate ? "eye" : "eye-off"} size={13} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 
@@ -170,17 +174,18 @@ export default function TaskboardWidget({ settings }: Props) {
                     )}
                     <div className={styles.widgetItemTitle}>{item.title}</div>
                     {item.assigneeName && (
-                      <span
-                        style={{
-                          width: 14, height: 14, borderRadius: "50%",
-                          background: "#3b82f6", color: "#fff",
-                          display: "inline-flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 8, fontWeight: 600, flexShrink: 0,
-                        }}
-                        title={item.assigneeName}
-                      >
-                        {item.assigneeName.charAt(0).toUpperCase()}
-                      </span>
+                      <Tooltip text={item.assigneeName} placement="top">
+                        <span
+                          style={{
+                            width: 14, height: 14, borderRadius: "50%",
+                            background: "#3b82f6", color: "#fff",
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 8, fontWeight: 600, flexShrink: 0,
+                          }}
+                        >
+                          {item.assigneeName.charAt(0).toUpperCase()}
+                        </span>
+                      </Tooltip>
                     )}
                     <div className={styles.widgetItemMeta}>
                       {dateStr ? (
