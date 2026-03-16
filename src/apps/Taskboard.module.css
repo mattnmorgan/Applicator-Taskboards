@@ -294,6 +294,10 @@
   position: relative;
 }
 
+.sectionHeaderCollapsed {
+  border-bottom: none;
+}
+
 .sectionHeader:hover .sectionDeleteBtn {
   opacity: 1;
 }
@@ -367,7 +371,7 @@
   gap: 6px;
   background: none;
   border: none;
-  color: #475569;
+  color: #64748b;
   cursor: pointer;
   padding: 5px 8px;
   border-radius: 6px;
@@ -407,7 +411,7 @@
 }
 
 .itemDragHandle {
-  color: #64748b;
+  color: #94a3b8;
   cursor: grab;
   opacity: 0;
   transition: opacity 0.15s;
@@ -422,6 +426,11 @@
 
 .itemDragHandle:active {
   cursor: grabbing;
+}
+
+.itemDragHandleHidden {
+  visibility: hidden !important;
+  pointer-events: none;
 }
 
 .checkbox {
@@ -447,20 +456,26 @@
   border-color: #3b82f6;
 }
 
-.itemContent {
-  flex: 1;
+.itemAssigneeSlot {
+  width: 22px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-width: 0;
-  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.itemDueSlot {
+  width: 100px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
 }
 
 .itemTitle {
   font-size: 13px;
   color: #e2e8f0;
   flex: 1;
-  min-width: 120px;
+  min-width: 60px;
   background: none;
   border: none;
   outline: none;
@@ -483,13 +498,7 @@
 .assigneeBadge {
   display: flex;
   align-items: center;
-  gap: 4px;
-  background: #1e3a5f;
-  color: #93c5fd;
-  border-radius: 999px;
-  padding: 1px 8px 1px 4px;
-  font-size: 11px;
-  white-space: nowrap;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -556,6 +565,8 @@
   opacity: 0;
   transition: opacity 0.15s;
   flex-shrink: 0;
+  width: 160px;
+  justify-content: flex-end;
 }
 
 .item:hover .itemActions {
@@ -910,22 +921,11 @@
 }
 
 /* ─── Assignee picker dropdown ────────────────────────────────── */
-.assigneePicker {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.assigneePickerDropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
+.assigneePickerWrapper {
   background: #1e293b;
   border: 1px solid #334155;
   border-radius: 8px;
-  z-index: 50;
-  min-width: 180px;
-  max-height: 200px;
-  overflow-y: auto;
+  overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 

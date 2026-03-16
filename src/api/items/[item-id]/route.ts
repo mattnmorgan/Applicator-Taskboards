@@ -41,8 +41,8 @@ export async function PATCH(
     if (body.reusable !== undefined) updates.reusable = body.reusable;
     if (body.complete !== undefined) {
       updates.complete = body.complete;
-      // When toggling, move to end of destination group
-      if (body.order === undefined) {
+      // Reusable items stay in the incomplete group regardless of completion — keep their order
+      if (body.order === undefined && !existing.data.reusable) {
         // Compute max order in target group within the same section
         const allItems = await itemManager.readRecords({ fields: { sectionId: existing.data.sectionId }, limit: 2000 });
         const targetGroup = allItems.records.filter(

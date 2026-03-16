@@ -24,6 +24,7 @@ export default function TaskboardWidget({ settings }: Props) {
   const [checklistName, setChecklistName] = useState<string | null>(null);
   const [items, setItems] = useState<WidgetItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [accessError, setAccessError] = useState(false);
 
   const checklistId = settings?.checklistId?.trim();
   const lookahead = settings?.lookahead || "none";
@@ -31,15 +32,19 @@ export default function TaskboardWidget({ settings }: Props) {
   useEffect(() => {
     if (!checklistId) return;
     setLoading(true);
+    setAccessError(false);
     fetch(`/api/tasklist/widget/${checklistId}?lookahead=${lookahead}`)
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (!r.ok) { setAccessError(true); return null; }
+        return r.json();
+      })
       .then((data) => {
         if (data) {
           setChecklistName(data.checklistName);
           setItems(data.items || []);
         }
       })
-      .catch(() => {})
+      .catch(() => setAccessError(true))
       .finally(() => setLoading(false));
   }, [checklistId, lookahead]);
 
@@ -77,7 +82,11 @@ export default function TaskboardWidget({ settings }: Props) {
         <div className={styles.widgetEmpty}>Loading…</div>
       )}
 
-      {!loading && items.length === 0 && (
+      {!loading && accessError && (
+        <div className={styles.widgetEmpty}>Checklist not found or access denied.</div>
+      )}
+
+      {!loading && !accessError && items.length === 0 && (
         <div className={styles.widgetEmpty}>No upcoming items.</div>
       )}
 

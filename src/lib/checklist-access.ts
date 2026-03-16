@@ -7,8 +7,8 @@ function checklistRecordId(checklistId: string) {
   return `checklist-${checklistId}`;
 }
 
-function sharePermission(checklistId: string, role: "editor" | "viewer") {
-  return `tasklist:checklist:${checklistId}:${role}`;
+function sharePermission(role: "editor" | "viewer") {
+  return role === "editor" ? "tasklist:checklist-editor" : "tasklist:checklist-viewer";
 }
 
 /**
@@ -62,7 +62,7 @@ export async function createChecklistShare(
   return caManager.createUserContextualAuthority({
     app: "tasklist",
     recordId: checklistRecordId(checklistId),
-    permission: sharePermission(checklistId, role),
+    permission: sharePermission(role),
     user: userId,
     createdBy,
     context: JSON.stringify({ role }),

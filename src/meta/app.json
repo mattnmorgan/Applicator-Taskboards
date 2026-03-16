@@ -139,8 +139,32 @@
       ]
     }
   ],
-  "authorizations": [],
-  "authorities": [],
+  "authorizations": [
+    {
+      "id": "checklist-editor",
+      "name": "Checklist Editor Access",
+      "description": "Grants edit access to a shared checklist",
+      "contextual": true
+    },
+    {
+      "id": "checklist-viewer",
+      "name": "Checklist Viewer Access",
+      "description": "Grants view access to a shared checklist",
+      "contextual": true
+    }
+  ],
+  "authorities": [
+    {
+      "id": "checklist-editor",
+      "name": "Checklist Editor",
+      "authorizations": ["tasklist:checklist-editor"]
+    },
+    {
+      "id": "checklist-viewer",
+      "name": "Checklist Viewer",
+      "authorizations": ["tasklist:checklist-viewer"]
+    }
+  ],
   "apiRoutes": [
     {
       "path": "checklists",

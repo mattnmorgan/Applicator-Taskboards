@@ -424,6 +424,14 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
 
         <div className={styles.headerActions}>
           <ButtonIcon
+            name="copy"
+            iconSize={14}
+            label="Copy checklist ID"
+            onClick={() => navigator.clipboard.writeText(checklistId)}
+            placement="bottom"
+          />
+
+          <ButtonIcon
             name="eye"
             iconSize={16}
             label={checklist.subscribed ? "Unwatch checklist" : "Watch checklist for notifications"}

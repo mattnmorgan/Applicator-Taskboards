@@ -131,7 +131,7 @@ export default function ChecklistSection({
       onDrop={handleSectionDrop}
     >
       {/* Section header */}
-      <div className={styles.sectionHeader}>
+      <div className={`${styles.sectionHeader} ${collapsed ? styles.sectionHeaderCollapsed : ""}`}>
         {/* Collapse toggle */}
         <span
           className={styles.sectionCollapseChevron}
@@ -199,7 +199,6 @@ export default function ChecklistSection({
               onUpdate={onItemUpdate}
               onDelete={onItemDelete}
               onToggleSubscription={onItemSubscriptionToggle}
-              dragging={draggingItemId === item.id}
               dragOver={dragOverItemId === item.id}
               onDragStart={() => onItemDragStart(item.id)}
               onDragOver={(e) => onItemDragOver(e, item.id)}
@@ -261,7 +260,6 @@ export default function ChecklistSection({
                   onUpdate={onItemUpdate}
                   onDelete={onItemDelete}
                   onToggleSubscription={onItemSubscriptionToggle}
-                  dragging={false}
                   dragOver={false}
                   onDragStart={() => {}}
                   onDragOver={() => {}}

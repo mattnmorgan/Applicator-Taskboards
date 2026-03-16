@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { ButtonIcon, Icon } from "@applicator/sdk/components";
+import { ButtonIcon, Icon, SearchableCombobox, Tooltip } from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
 import { ItemData } from "@/src/types/ItemData";
 import { SystemUser } from "@/src/types/SystemUser";
@@ -14,7 +14,6 @@ interface Props {
   onUpdate: (id: string, updates: Partial<ItemData & { assigneeName?: string }>) => void;
   onDelete: (id: string) => void;
   onToggleSubscription: (item: ItemData) => void;
-  dragging: boolean;
   dragOver: boolean;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -30,7 +29,6 @@ export default function ChecklistItem({
   onUpdate,
   onDelete,
   onToggleSubscription,
-  dragging,
   dragOver,
   onDragStart,
   onDragOver,
@@ -42,13 +40,15 @@ export default function ChecklistItem({
   const [editingDate, setEditingDate] = useState(false);
   const [dateValue, setDateValue] = useState(item.dueDate || "");
   const [showAssigneePicker, setShowAssigneePicker] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number } | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const assignBtnRef = useRef<HTMLDivElement>(null);
 
   const canEdit = access === "owner" || access === "editor" || item.assigneeId === currentUserId;
   const canAssign = access === "owner" || access === "editor";
+  const isDraggable = !item.complete || item.reusable;
 
   useEffect(() => {
     setTitleValue(item.title);
@@ -64,18 +64,27 @@ export default function ChecklistItem({
     const handler = (e: MouseEvent) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         setShowAssigneePicker(false);
+        setPickerPos(null);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [showAssigneePicker]);
 
+  const openAssigneePicker = (e: React.MouseEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const width = 240;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    const top = rect.bottom + 4;
+    setPickerPos({ top, left });
+    setShowAssigneePicker(true);
+  };
+
   const saveTitle = useCallback(async () => {
     if (titleValue.trim() === item.title) {
       setEditingTitle(false);
       return;
     }
-    setSaving(true);
     try {
       const res = await fetch(`/api/tasklist/items/${item.id}`, {
         method: "PATCH",
@@ -87,7 +96,6 @@ export default function ChecklistItem({
         onUpdate(item.id, { title: data.title });
       }
     } finally {
-      setSaving(false);
       setEditingTitle(false);
     }
   }, [item.id, item.title, titleValue, onUpdate]);
@@ -150,6 +158,7 @@ export default function ChecklistItem({
 
   const setAssignee = async (userId: string | null) => {
     setShowAssigneePicker(false);
+    setPickerPos(null);
     const user = userId ? users.find((u) => u.id === userId) : null;
     try {
       const res = await fetch(`/api/tasklist/items/${item.id}`, {
@@ -187,13 +196,13 @@ export default function ChecklistItem({
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      {/* Drag handle — only draggable for incomplete (or reusable) items */}
+      {/* Drag handle — hidden (visibility) for complete non-reusable items to preserve layout */}
       <span
-        className={styles.itemDragHandle}
-        draggable={!item.complete || item.reusable}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        style={{ cursor: (!item.complete || item.reusable) ? "grab" : "default" }}
+        className={`${styles.itemDragHandle} ${!isDraggable ? styles.itemDragHandleHidden : ""}`}
+        draggable={isDraggable}
+        onDragStart={isDraggable ? onDragStart : undefined}
+        onDragEnd={isDraggable ? onDragEnd : undefined}
+        style={{ cursor: isDraggable ? "grab" : "default" }}
       >
         <Icon name="drag" size={12} />
       </span>
@@ -212,42 +221,42 @@ export default function ChecklistItem({
       </div>
 
       {/* Title */}
-      <div className={styles.itemContent}>
-        <input
-          ref={titleRef}
-          className={styles.itemTitle}
-          value={editingTitle ? titleValue : item.title}
-          readOnly={!editingTitle || !canEdit}
-          onFocus={() => {
-            if (canEdit) {
-              setEditingTitle(true);
-              setTitleValue(item.title);
-            }
-          }}
-          onChange={(e) => setTitleValue(e.target.value)}
-          onBlur={saveTitle}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") { e.preventDefault(); saveTitle(); }
-            if (e.key === "Escape") { setTitleValue(item.title); setEditingTitle(false); }
-          }}
-        />
+      <input
+        ref={titleRef}
+        className={styles.itemTitle}
+        value={editingTitle ? titleValue : item.title}
+        readOnly={!editingTitle || !canEdit}
+        onFocus={() => {
+          if (canEdit) {
+            setEditingTitle(true);
+            setTitleValue(item.title);
+          }
+        }}
+        onChange={(e) => setTitleValue(e.target.value)}
+        onBlur={saveTitle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); saveTitle(); }
+          if (e.key === "Escape") { setTitleValue(item.title); setEditingTitle(false); }
+        }}
+      />
 
-        {/* Assignee badge */}
+      {/* Assignee slot — always rendered for badge alignment */}
+      <div className={styles.itemAssigneeSlot}>
         {item.assigneeId && item.assigneeName && (
-          <div
-            className={styles.assigneeBadge}
-            onClick={() => canAssign && setShowAssigneePicker(true)}
-            style={{ cursor: canAssign ? "pointer" : "default" }}
-            title={item.assigneeName}
-          >
-            <span className={styles.assigneeAvatar}>
+          <Tooltip text={item.assigneeName} placement="top">
+            <span
+              className={styles.assigneeAvatar}
+              onClick={(e) => canAssign && openAssigneePicker(e)}
+              style={{ cursor: canAssign ? "pointer" : "default" }}
+            >
               {item.assigneeName.charAt(0).toUpperCase()}
             </span>
-            {item.assigneeName}
-          </div>
+          </Tooltip>
         )}
+      </div>
 
-        {/* Due date */}
+      {/* Due date slot — always rendered for badge alignment */}
+      <div className={styles.itemDueSlot}>
         {item.dueDate !== null && item.dueDate !== "" && !editingDate && (
           <div
             className={getDueBadgeClass()}
@@ -274,40 +283,28 @@ export default function ChecklistItem({
         )}
       </div>
 
-      {/* Assignee picker */}
-      {showAssigneePicker && canAssign && (
-        <div ref={pickerRef} className={styles.assigneePicker}>
-          <div className={styles.assigneePickerDropdown}>
-            {users.map((u) => (
-              <div
-                key={u.id}
-                className={`${styles.assigneePickerItem} ${item.assigneeId === u.id ? styles.selected : ""}`}
-                onClick={() => setAssignee(u.id)}
-              >
-                <span className={styles.assigneeAvatar}>{u.displayName.charAt(0).toUpperCase()}</span>
-                {u.displayName}
-              </div>
-            ))}
-            {item.assigneeId && (
-              <div className={styles.assigneePickerClear} onClick={() => setAssignee(null)}>
-                Remove assignee
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Action buttons (visible on hover) */}
       <div className={styles.itemActions}>
         {!item.assigneeId && canAssign && (
-          <ButtonIcon
-            name="user"
-            iconSize={13}
-            label="Assign user"
-            onClick={() => setShowAssigneePicker(true)}
-            size="sm"
-            placement="top"
-          />
+          <div ref={assignBtnRef} style={{ display: "contents" }}>
+            <ButtonIcon
+              name="user"
+              iconSize={13}
+              label="Assign user"
+              onClick={() => {
+                const rect = assignBtnRef.current?.getBoundingClientRect();
+                const width = 240;
+                const top = rect ? rect.bottom + 4 : window.innerHeight / 2;
+                const left = rect
+                  ? Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
+                  : window.innerWidth / 2 - width / 2;
+                setPickerPos({ top, left });
+                setShowAssigneePicker(true);
+              }}
+              size="sm"
+              placement="top"
+            />
+          </div>
         )}
 
         {(item.dueDate === null || item.dueDate === "") && canEdit && (
@@ -357,6 +354,52 @@ export default function ChecklistItem({
           />
         )}
       </div>
+
+      {/* Assignee picker — fixed-positioned to avoid off-screen issues */}
+      {showAssigneePicker && canAssign && pickerPos && (
+        <div
+          ref={pickerRef}
+          className={styles.assigneePickerWrapper}
+          style={{
+            position: "fixed",
+            top: pickerPos.top,
+            left: pickerPos.left,
+            zIndex: 200,
+            width: 240,
+          }}
+        >
+          <SearchableCombobox<SystemUser>
+            items={users}
+            selectedItems={item.assigneeId ? users.filter((u) => u.id === item.assigneeId) : []}
+            onSelectionChange={(selected) => {
+              if (selected.length > 0) {
+                setAssignee(selected[0].id);
+              } else {
+                // Deselect in single-select mode — close without change
+                setShowAssigneePicker(false);
+                setPickerPos(null);
+              }
+            }}
+            renderItem={(u) => (
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span className={styles.assigneeAvatar}>{u.displayName.charAt(0).toUpperCase()}</span>
+                {u.displayName}
+              </span>
+            )}
+            filterItem={(u, term) =>
+              u.displayName.toLowerCase().includes(term.toLowerCase()) ||
+              u.username.toLowerCase().includes(term.toLowerCase())
+            }
+            getItemKey={(u) => u.id}
+            placeholder="Search users..."
+          />
+          {item.assigneeId && (
+            <div className={styles.assigneePickerClear} onClick={() => setAssignee(null)}>
+              Remove assignee
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
