@@ -44,6 +44,7 @@ export async function PATCH(
 }
 
 // DELETE /api/tasklist/checklists/:checklistId/shares/:shareId — remove share
+// Owners can remove any share; shared users can remove their own share (leave checklist).
 export async function DELETE(
   _req: NextRequest,
   context: ApiContext,
@@ -52,14 +53,17 @@ export async function DELETE(
   const { checklistId, shareId } = params;
   const access = await getChecklistAccess(context, checklistId);
   if (!access) return NextResponse.json({ error: "Not found or access denied" }, { status: 404 });
-  if (access.level !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   try {
-    // Verify the share belongs to this checklist before deleting
     const cas = await listChecklistShares(context, checklistId);
     const existing = cas.find((ca: any) => ca.id === shareId);
     if (!existing) {
       return NextResponse.json({ error: "Share not found" }, { status: 404 });
+    }
+
+    const isSelfRemoval = existing.data.user === access.userId;
+    if (access.level !== "owner" && !isSelfRemoval) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     await deleteChecklistShare(context, shareId);

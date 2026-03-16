@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Icon } from "@applicator/sdk/components";
+import { Icon, SearchableCombobox, Tooltip } from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
 import { SystemUser } from "@/src/types/SystemUser";
 
@@ -10,6 +10,7 @@ interface ShareEntry {
   userId: string;
   displayName: string;
   username: string;
+  profilePicture: string | null;
   role: "editor" | "viewer";
 }
 
@@ -23,7 +24,7 @@ interface Props {
 export default function ShareModal({ checklistId, onClose, users, currentUserId }: Props) {
   const [shares, setShares] = useState<ShareEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
   const [selectedRole, setSelectedRole] = useState<"editor" | "viewer">("editor");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,19 +47,19 @@ export default function ShareModal({ checklistId, onClose, users, currentUserId 
   }, [load]);
 
   const addShare = async () => {
-    if (!selectedUserId) return;
+    if (!selectedUser) return;
     setAdding(true);
     setError(null);
     try {
       const res = await fetch(`/api/tasklist/checklists/${checklistId}/shares`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: selectedUserId, role: selectedRole }),
+        body: JSON.stringify({ userId: selectedUser.id, role: selectedRole }),
       });
       if (res.ok) {
         const data = await res.json();
         setShares((prev) => [...prev, data]);
-        setSelectedUserId("");
+        setSelectedUser(null);
       } else {
         const data = await res.json();
         setError(data.error || "Failed to share");
@@ -107,22 +108,58 @@ export default function ShareModal({ checklistId, onClose, users, currentUserId 
           {/* Add user */}
           <div className={styles.formGroup}>
             <label className={styles.formLabel}>Add person</label>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <SearchableCombobox<SystemUser>
+                  items={availableUsers}
+                  selectedItems={selectedUser ? [selectedUser] : []}
+                  onSelectionChange={(selected) => setSelectedUser(selected[0] || null)}
+                  renderItem={(u) => (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#e2e8f0" }}>
+                      <div
+                        style={{
+                          width: 20,
+                          height: 20,
+                          minWidth: 20,
+                          borderRadius: "50%",
+                          background: "#3b82f6",
+                          color: "#fff",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          overflow: "hidden",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {u.profilePicture ? (
+                          <img
+                            src={u.profilePicture}
+                            alt={u.displayName}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        ) : (
+                          (u.displayName || u.username || "?").charAt(0).toUpperCase()
+                        )}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{u.displayName}</div>
+                        <div style={{ fontSize: 11, color: "#64748b" }}>@{u.username}</div>
+                      </div>
+                    </div>
+                  )}
+                  filterItem={(u, term) =>
+                    u.displayName.toLowerCase().includes(term.toLowerCase()) ||
+                    u.username.toLowerCase().includes(term.toLowerCase())
+                  }
+                  getItemKey={(u) => u.id}
+                  placeholder="Search users…"
+                />
+              </div>
               <select
                 className={styles.formSelect}
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-              >
-                <option value="">Select user…</option>
-                {availableUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.displayName} (@{u.username})
-                  </option>
-                ))}
-              </select>
-              <select
-                className={styles.formSelect}
-                style={{ width: "100px", flexShrink: 0 }}
+                style={{ width: 100, flexShrink: 0 }}
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value as "editor" | "viewer")}
               >
@@ -132,7 +169,7 @@ export default function ShareModal({ checklistId, onClose, users, currentUserId 
               <button
                 className={styles.btnPrimary}
                 onClick={addShare}
-                disabled={!selectedUserId || adding}
+                disabled={!selectedUser || adding}
                 style={{ flexShrink: 0 }}
               >
                 {adding ? "Adding…" : "Add"}
@@ -151,7 +188,15 @@ export default function ShareModal({ checklistId, onClose, users, currentUserId 
                 {shares.map((share) => (
                   <div key={share.id} className={styles.shareItem}>
                     <span className={styles.shareAvatar}>
-                      {share.displayName.charAt(0).toUpperCase()}
+                      {share.profilePicture ? (
+                        <img
+                          src={share.profilePicture}
+                          alt={share.displayName}
+                          style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }}
+                        />
+                      ) : (
+                        share.displayName.charAt(0).toUpperCase()
+                      )}
                     </span>
                     <div className={styles.shareUserInfo}>
                       <div className={styles.shareUserName}>{share.displayName}</div>
@@ -165,13 +210,14 @@ export default function ShareModal({ checklistId, onClose, users, currentUserId 
                       <option value="editor">Editor</option>
                       <option value="viewer">Viewer</option>
                     </select>
-                    <button
-                      className={styles.iconBtn}
-                      onClick={() => removeShare(share.id)}
-                      title="Remove access"
-                    >
-                      <Icon name="close" size={14} />
-                    </button>
+                    <Tooltip text="Remove access" placement="top">
+                      <button
+                        className={styles.iconBtn}
+                        onClick={() => removeShare(share.id)}
+                      >
+                        <Icon name="close" size={14} />
+                      </button>
+                    </Tooltip>
                   </div>
                 ))}
               </div>

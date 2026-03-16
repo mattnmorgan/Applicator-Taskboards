@@ -17,6 +17,9 @@ export async function GET(_req: NextRequest, context: ApiContext) {
       id: r.id,
       username: r.data.username,
       displayName: r.data.display_name || r.data.username,
+      profilePicture: r.data.icon
+        ? `/api/system/assets/icons/users/${r.id}`
+        : undefined,
     })),
   });
 }

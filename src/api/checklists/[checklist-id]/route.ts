@@ -23,12 +23,17 @@ export async function GET(
   const sectionResult = await sections.readRecords({ fields: { checklistId }, limit: 500 });
   const itemResult = await items.readRecords({ fields: { checklistId }, limit: 2000 });
 
-  // Fetch assignee display names
-  const assigneeIds = [...new Set(itemResult.records.map((r) => r.data.assigneeId).filter(Boolean))];
+  // Fetch assignee display names and profile pictures
+  const assigneeIds = [...new Set(itemResult.records.map((r) => r.data.assigneeId).filter((id: string | undefined): id is string => !!id))];
   const assigneeNames: Record<string, string> = {};
+  const assigneePictures: Record<string, string> = {};
+  const userManager = context.recordManager("system", "users");
   for (const uid of assigneeIds) {
-    const u = await context.user(uid);
-    if (u) assigneeNames[uid] = u.display_name || u.username;
+    const u = await userManager.readRecord(uid) as any;
+    if (u) {
+      assigneeNames[uid] = u.data.display_name || u.data.username;
+      if (u.data.icon) assigneePictures[uid] = `/api/system/assets/icons/users/${uid}`;
+    }
   }
 
   // Get subscriptions for this user
@@ -53,6 +58,7 @@ export async function GET(
         title: i.data.title,
         assigneeId: i.data.assigneeId || null,
         assigneeName: i.data.assigneeId ? (assigneeNames[i.data.assigneeId] || null) : null,
+        assigneePicture: i.data.assigneeId ? (assigneePictures[i.data.assigneeId] || null) : null,
         dueDate: i.data.dueDate || null,
         reusable: !!i.data.reusable,
         complete: !!i.data.complete,

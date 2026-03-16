@@ -4,6 +4,7 @@ export interface ItemData {
   title: string;
   assigneeId: string | null;
   assigneeName: string | null;
+  assigneePicture?: string | null;
   dueDate: string | null;
   reusable: boolean;
   complete: boolean;

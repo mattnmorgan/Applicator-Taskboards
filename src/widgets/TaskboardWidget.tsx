@@ -9,6 +9,7 @@ interface WidgetItem {
   title: string;
   assigneeId: string | null;
   assigneeName: string | null;
+  assigneePicture: string | null;
   dueDate: string | null;
   reusable: boolean;
   complete: boolean;
@@ -180,10 +181,18 @@ export default function TaskboardWidget({ settings }: Props) {
                             width: 14, height: 14, borderRadius: "50%",
                             background: "#3b82f6", color: "#fff",
                             display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 8, fontWeight: 600, flexShrink: 0,
+                            fontSize: 8, fontWeight: 600, flexShrink: 0, overflow: "hidden",
                           }}
                         >
-                          {item.assigneeName.charAt(0).toUpperCase()}
+                          {item.assigneePicture ? (
+                            <img
+                              src={item.assigneePicture}
+                              alt={item.assigneeName}
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          ) : (
+                            item.assigneeName.charAt(0).toUpperCase()
+                          )}
                         </span>
                       </Tooltip>
                     )}

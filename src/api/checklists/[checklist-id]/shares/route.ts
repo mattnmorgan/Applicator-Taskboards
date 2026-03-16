@@ -14,16 +14,18 @@ export async function GET(
   if (access.level !== "owner") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const cas = await listChecklistShares(context, checklistId);
+  const userMgr = context.recordManager("system", "users");
 
   const enriched = await Promise.all(
     cas.map(async (ca: any) => {
       const ctx = ca.data.context ? JSON.parse(ca.data.context) : {};
-      const u = await context.user(ca.data.user);
+      const u = await userMgr.readRecord(ca.data.user) as any;
       return {
         id: ca.id,
         userId: ca.data.user,
-        displayName: u?.display_name || u?.username || ca.data.user,
-        username: u?.username || ca.data.user,
+        displayName: u?.data.display_name || u?.data.username || ca.data.user,
+        username: u?.data.username || ca.data.user,
+        profilePicture: u?.data.icon ? `/api/system/assets/icons/users/${ca.data.user}` : null,
         role: ctx.role as "editor" | "viewer",
       };
     }),
@@ -63,13 +65,15 @@ export async function POST(
     }
 
     const ca = await createChecklistShare(context, checklistId, body.userId, body.role, access.userId);
-    const u = await context.user(body.userId);
+    const userMgr2 = context.recordManager("system", "users");
+    const u = await userMgr2.readRecord(body.userId) as any;
     return NextResponse.json(
       {
         id: ca.id,
         userId: body.userId,
-        displayName: u?.display_name || u?.username || body.userId,
-        username: u?.username || body.userId,
+        displayName: u?.data.display_name || u?.data.username || body.userId,
+        username: u?.data.username || body.userId,
+        profilePicture: u?.data.icon ? `/api/system/assets/icons/users/${body.userId}` : null,
         role: body.role,
       },
       { status: 201 },

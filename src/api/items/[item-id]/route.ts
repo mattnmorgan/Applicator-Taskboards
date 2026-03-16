@@ -59,17 +59,25 @@ export async function PATCH(
     const table = await itemManager.getTable();
     const updated = await itemManager.updateRecord(table, itemId, updates);
 
-    // Enrich with assignee name
+    // Enrich with assignee name and profile picture
     let assigneeName: string | null = null;
+    let assigneePicture: string | null = null;
     if (updated.data.assigneeId) {
-      const u = await context.user(updated.data.assigneeId);
-      assigneeName = u?.display_name || u?.username || null;
+      const um = context.recordManager("system", "users");
+      const u = await um.readRecord(updated.data.assigneeId) as any;
+      if (u) {
+        assigneeName = u.data.display_name || u.data.username || null;
+        assigneePicture = u.data.icon
+          ? `/api/system/assets/icons/users/${updated.data.assigneeId}`
+          : null;
+      }
     }
 
     return NextResponse.json({
       id: updated.id,
       ...updated.data,
       assigneeName,
+      assigneePicture,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

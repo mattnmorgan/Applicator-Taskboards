@@ -43,12 +43,17 @@ export async function GET(
     })
     .sort((a: ItemRec, b: ItemRec) => (a.data.order ?? 0) - (b.data.order ?? 0));
 
-  // Enrich with assignee names
+  // Enrich with assignee names and profile pictures
   const assigneeIds = [...new Set(filtered.map((r: ItemRec) => r.data.assigneeId).filter((id): id is string => !!id))];
   const assigneeNames: Record<string, string> = {};
+  const assigneePictures: Record<string, string> = {};
+  const userMgr = context.recordManager("system", "users");
   for (const uid of assigneeIds) {
-    const u = await context.user(uid);
-    if (u) assigneeNames[uid] = u.display_name || u.username;
+    const u = await userMgr.readRecord(uid) as any;
+    if (u) {
+      assigneeNames[uid] = u.data.display_name || u.data.username;
+      if (u.data.icon) assigneePictures[uid] = `/api/system/assets/icons/users/${uid}`;
+    }
   }
 
   // Sort sections by order
@@ -72,6 +77,7 @@ export async function GET(
         title: r.data.title,
         assigneeId: r.data.assigneeId || null,
         assigneeName: r.data.assigneeId ? (assigneeNames[r.data.assigneeId] || null) : null,
+        assigneePicture: r.data.assigneeId ? (assigneePictures[r.data.assigneeId] || null) : null,
         dueDate: r.data.dueDate || null,
         reusable: !!r.data.reusable,
         complete: !!r.data.complete,

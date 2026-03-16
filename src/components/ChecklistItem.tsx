@@ -163,7 +163,6 @@ export default function ChecklistItem({
   const setAssignee = async (userId: string | null) => {
     setShowAssigneePicker(false);
     setPickerPos(null);
-    const user = userId ? users.find((u) => u.id === userId) : null;
     try {
       const res = await fetch(`/api/tasklist/items/${item.id}`, {
         method: "PATCH",
@@ -171,9 +170,11 @@ export default function ChecklistItem({
         body: JSON.stringify({ assigneeId: userId || "" }),
       });
       if (res.ok) {
+        const data = await res.json();
         onUpdate(item.id, {
           assigneeId: userId,
-          assigneeName: user?.displayName || undefined,
+          assigneeName: data.assigneeName || undefined,
+          assigneePicture: data.assigneePicture || undefined,
         });
       }
     } catch {}
@@ -273,7 +274,15 @@ export default function ChecklistItem({
               onClick={(e) => canAssign && openAssigneePicker(e)}
               style={{ cursor: canAssign ? "pointer" : "default" }}
             >
-              {item.assigneeName.charAt(0).toUpperCase()}
+              {item.assigneePicture ? (
+                <img
+                  src={item.assigneePicture}
+                  alt={item.assigneeName}
+                  style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", display: "block" }}
+                />
+              ) : (
+                item.assigneeName.charAt(0).toUpperCase()
+              )}
             </span>
           </Tooltip>
         )}
@@ -453,11 +462,18 @@ export default function ChecklistItem({
                       justifyContent: "center",
                       fontSize: "9px",
                       fontWeight: "600",
+                      overflow: "hidden",
                     }}
                   >
-                    {(u.displayName || u.username || "?")
-                      .charAt(0)
-                      .toUpperCase()}
+                    {u.profilePicture ? (
+                      <img
+                        src={u.profilePicture}
+                        alt={u.displayName}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      (u.displayName || u.username || "?").charAt(0).toUpperCase()
+                    )}
                   </div>
                   <div>{u.displayName}</div>
                 </div>

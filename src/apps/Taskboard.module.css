@@ -197,16 +197,58 @@
   line-height: 1.4;
 }
 
+.checklistCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  gap: 8px;
+  min-height: 20px;
+}
+
+.checklistCardOwner {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #475569;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .checklistCardBadge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 10px;
   background: #334155;
   color: #94a3b8;
   border-radius: 4px;
   padding: 2px 7px;
   font-size: 11px;
+  flex-shrink: 0;
+}
+
+.checklistSearchBar {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #f1f5f9;
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+  margin-bottom: 16px;
+}
+
+.checklistSearchBar::placeholder {
+  color: #475569;
+}
+
+.checklistSearchBar:focus {
+  border-color: #3b82f6;
 }
 
 .checklistCardDelete {

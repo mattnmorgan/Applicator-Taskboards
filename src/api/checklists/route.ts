@@ -17,7 +17,10 @@ export async function GET(_req: NextRequest, context: ApiContext) {
   const userCAsResult = await caManager.readRecords({ fields: { user: user.id, app: "tasklist" } });
   const userCAs = userCAsResult.records;
 
-  const sharedChecklists: { id: string; name: string; description: string; ownerId: string; role: string }[] = [];
+  const ownerName = user.display_name || user.username;
+
+  const userMgr = context.recordManager("system", "users");
+  const sharedChecklists: { id: string; name: string; description: string; ownerId: string; ownerName: string; role: string; shareId: string }[] = [];
   for (const ca of userCAs) {
     const ctx = ca.data.context ? JSON.parse(ca.data.context) : {};
     // CA id format: "tasklist:checklist-{checklistId}:user:{userId}"
@@ -26,12 +29,15 @@ export async function GET(_req: NextRequest, context: ApiContext) {
     if (!checklistId) continue;
     const cl = await checklists.readRecord(checklistId);
     if (cl) {
+      const ownerRec = await userMgr.readRecord(cl.data.ownerId) as any;
       sharedChecklists.push({
         id: cl.id,
         name: cl.data.name,
         description: cl.data.description,
         ownerId: cl.data.ownerId,
+        ownerName: ownerRec?.data.display_name || ownerRec?.data.username || cl.data.ownerId,
         role: ctx.role,
+        shareId: ca.id,
       });
     }
   }
@@ -42,6 +48,7 @@ export async function GET(_req: NextRequest, context: ApiContext) {
       name: r.data.name,
       description: r.data.description,
       ownerId: r.data.ownerId,
+      ownerName,
       role: "owner",
     })),
     shared: sharedChecklists,

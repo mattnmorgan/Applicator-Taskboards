@@ -18,6 +18,8 @@ export default function ChecklistList({ onOpen }: Props) {
   const [createDesc, setCreateDesc] = useState("");
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [leavingId, setLeavingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +60,19 @@ export default function ChecklistList({ onOpen }: Props) {
     }
   };
 
+  const handleLeave = async (cl: ChecklistSummary) => {
+    if (!cl.shareId) return;
+    setLeavingId(cl.id);
+    try {
+      const res = await fetch(`/api/tasklist/checklists/${cl.id}/shares/${cl.shareId}`, { method: "DELETE" });
+      if (res.ok) {
+        setShared((prev) => prev.filter((c) => c.id !== cl.id));
+      }
+    } finally {
+      setLeavingId(null);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this checklist and all its content?")) return;
     setDeletingId(id);
@@ -72,6 +87,17 @@ export default function ChecklistList({ onOpen }: Props) {
   };
 
   if (loading) return <div className={styles.loading}>Loading…</div>;
+
+  const q = search.trim().toLowerCase();
+  const matchCl = (cl: ChecklistSummary) =>
+    !q ||
+    cl.name.toLowerCase().includes(q) ||
+    cl.description.toLowerCase().includes(q) ||
+    cl.ownerName.toLowerCase().includes(q);
+
+  const filteredOwned = owned.filter(matchCl);
+  const filteredShared = shared.filter(matchCl);
+  const hasResults = filteredOwned.length > 0 || filteredShared.length > 0;
 
   return (
     <div className={styles.page}>
@@ -91,16 +117,37 @@ export default function ChecklistList({ onOpen }: Props) {
           </div>
         )}
 
-        {owned.length > 0 && (
+        {(owned.length > 0 || shared.length > 0) && (
+          <input
+            className={styles.checklistSearchBar}
+            placeholder="Search by name, description, or owner…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        )}
+
+        {q && !hasResults && (
+          <div style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: "24px 0" }}>
+            No checklists match &ldquo;{search}&rdquo;.
+          </div>
+        )}
+
+        {filteredOwned.length > 0 && (
           <>
             <div className={styles.sectionLabel}>My Checklists</div>
             <div className={styles.checklistGrid}>
-              {owned.map((cl) => (
+              {filteredOwned.map((cl) => (
                 <div key={cl.id} className={styles.checklistCard} onClick={() => onOpen(cl.id)}>
                   <div className={styles.checklistCardName}>{cl.name}</div>
                   {cl.description && (
                     <div className={styles.checklistCardDesc}>{cl.description}</div>
                   )}
+                  <div className={styles.checklistCardFooter}>
+                    <span className={styles.checklistCardOwner}>
+                      <Icon name="user" size={10} />
+                      {cl.ownerName}
+                    </span>
+                  </div>
                   <div
                     className={styles.checklistCardDelete}
                     onClick={(e) => e.stopPropagation()}
@@ -121,19 +168,38 @@ export default function ChecklistList({ onOpen }: Props) {
           </>
         )}
 
-        {shared.length > 0 && (
+        {filteredShared.length > 0 && (
           <>
             <div className={styles.sectionLabel}>Shared With Me</div>
             <div className={styles.checklistGrid}>
-              {shared.map((cl) => (
+              {filteredShared.map((cl) => (
                 <div key={cl.id} className={styles.checklistCard} onClick={() => onOpen(cl.id)}>
                   <div className={styles.checklistCardName}>{cl.name}</div>
                   {cl.description && (
                     <div className={styles.checklistCardDesc}>{cl.description}</div>
                   )}
-                  <div className={styles.checklistCardBadge}>
-                    <Icon name="users" size={10} />
-                    {cl.role}
+                  <div className={styles.checklistCardFooter}>
+                    <span className={styles.checklistCardOwner}>
+                      <Icon name="user" size={10} />
+                      {cl.ownerName}
+                    </span>
+                    <div className={styles.checklistCardBadge}>
+                      <Icon name="users" size={10} />
+                      {cl.role}
+                    </div>
+                  </div>
+                  <div
+                    className={styles.checklistCardDelete}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ButtonIcon
+                      name="eye-off"
+                      iconSize={14}
+                      label="Remove from Shared"
+                      onClick={() => handleLeave(cl)}
+                      disabled={leavingId === cl.id}
+                      placement="top"
+                    />
                   </div>
                 </div>
               ))}

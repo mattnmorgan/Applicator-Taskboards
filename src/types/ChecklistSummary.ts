@@ -4,4 +4,6 @@ export interface ChecklistSummary {
   description: string;
   ownerId: string;
   role: "owner" | "editor" | "viewer";
+  ownerName: string;
+  shareId?: string;
 }
