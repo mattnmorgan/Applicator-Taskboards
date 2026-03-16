@@ -207,6 +207,11 @@ export default function ChecklistSection({
             />
           ))}
 
+          {/* Empty state for viewers when section has no items */}
+          {!canEdit && incompleteItems.length === 0 && (
+            <div className={styles.sectionEmptyState}>There are no items in this section.</div>
+          )}
+
           {/* Add item row */}
           {canEdit && !showAddItem && (
             <div className={styles.addItemRow}>

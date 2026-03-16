@@ -44,11 +44,12 @@ export default function ChecklistItem({
   const titleRef = useRef<HTMLInputElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const assignBtnRef = useRef<HTMLDivElement>(null);
+  const actionsRef = useRef<HTMLDivElement>(null);
 
+  const isViewer = access === "viewer";
   const canEdit = access === "owner" || access === "editor" || item.assigneeId === currentUserId;
   const canAssign = access === "owner" || access === "editor";
-  const isDraggable = !item.complete || item.reusable;
+  const isDraggable = !isViewer && (!item.complete || item.reusable);
 
   useEffect(() => {
     setTitleValue(item.title);
@@ -193,10 +194,10 @@ export default function ChecklistItem({
   return (
     <div
       className={`${styles.item} ${item.complete ? styles.complete : ""} ${dragOver ? styles.dragOver : ""}`}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
+      onDragOver={!isViewer ? onDragOver : undefined}
+      onDrop={!isViewer ? onDrop : undefined}
     >
-      {/* Drag handle — hidden (visibility) for complete non-reusable items to preserve layout */}
+      {/* Drag handle — hidden for viewers and for complete non-reusable items */}
       <span
         className={`${styles.itemDragHandle} ${!isDraggable ? styles.itemDragHandleHidden : ""}`}
         draggable={isDraggable}
@@ -207,18 +208,21 @@ export default function ChecklistItem({
         <Icon name="drag" size={12} />
       </span>
 
-      {/* Checkbox */}
-      <div
-        className={`${styles.checkbox} ${item.complete ? styles.checked : ""}`}
-        onClick={toggleComplete}
-        title={item.complete ? "Mark incomplete" : "Mark complete"}
-      >
-        {item.complete && (
-          <span style={{ color: "#fff" }}>
-            <Icon name="check" size={10} />
-          </span>
-        )}
-      </div>
+      {/* Checkbox — hidden for viewers */}
+      {!isViewer && (
+        <div
+          className={`${styles.checkbox} ${item.complete ? styles.checked : ""}`}
+          onClick={toggleComplete}
+          title={item.complete ? "Mark incomplete" : "Mark complete"}
+        >
+          {item.complete && (
+            <span style={{ color: "#fff" }}>
+              <Icon name="check" size={10} />
+            </span>
+          )}
+        </div>
+      )}
+      {isViewer && <div className={styles.checkboxSpacer} />}
 
       {/* Title */}
       <input
@@ -284,27 +288,25 @@ export default function ChecklistItem({
       </div>
 
       {/* Action buttons (visible on hover) */}
-      <div className={styles.itemActions}>
+      <div ref={actionsRef} className={styles.itemActions}>
         {!item.assigneeId && canAssign && (
-          <div ref={assignBtnRef} style={{ display: "contents" }}>
-            <ButtonIcon
-              name="user"
-              iconSize={13}
-              label="Assign user"
-              onClick={() => {
-                const rect = assignBtnRef.current?.getBoundingClientRect();
-                const width = 240;
-                const top = rect ? rect.bottom + 4 : window.innerHeight / 2;
-                const left = rect
-                  ? Math.max(8, Math.min(rect.left, window.innerWidth - width - 8))
-                  : window.innerWidth / 2 - width / 2;
-                setPickerPos({ top, left });
-                setShowAssigneePicker(true);
-              }}
-              size="sm"
-              placement="top"
-            />
-          </div>
+          <ButtonIcon
+            name="user"
+            iconSize={13}
+            label="Assign user"
+            onClick={() => {
+              const rect = actionsRef.current?.getBoundingClientRect();
+              const width = 240;
+              const top = rect ? rect.bottom + 4 : window.innerHeight / 2;
+              const left = rect
+                ? Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))
+                : window.innerWidth / 2 - width / 2;
+              setPickerPos({ top, left: Math.max(8, left) });
+              setShowAssigneePicker(true);
+            }}
+            size="sm"
+            placement="top"
+          />
         )}
 
         {(item.dueDate === null || item.dueDate === "") && canEdit && (
