@@ -24,8 +24,8 @@ export async function GET(
 
   const filtered = result.records
     .filter((r) => {
-      // Always exclude completed non-reusable items
-      if (r.data.complete && !r.data.reusable) return false;
+      // Always exclude completed items (including reusable ones)
+      if (r.data.complete) return false;
       if (!cutoffMs) return true; // "none" = show all incomplete/reusable
 
       // For reusable items with custom text dates, always show
@@ -55,6 +55,8 @@ export async function GET(
 
   return NextResponse.json({
     checklistName: access.checklist.data.name,
+    accessLevel: access.level,
+    currentUserId: access.userId,
     items: filtered.map((r) => ({
       id: r.id,
       title: r.data.title,

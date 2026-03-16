@@ -181,7 +181,7 @@ export default function ChecklistItem({
     const today = new Date().toISOString().split("T")[0];
     if (item.dueDate < today) return `${styles.dueBadge} ${styles.overdue}`;
     if (item.dueDate === today) return `${styles.dueBadge} ${styles.dueToday}`;
-    return styles.dueBadge;
+    return `${styles.dueBadge} ${styles.dueFuture}`;
   };
 
   const formatDate = (d: string) => {
@@ -230,6 +230,8 @@ export default function ChecklistItem({
         className={styles.itemTitle}
         value={editingTitle ? titleValue : item.title}
         readOnly={!editingTitle || !canEdit}
+        style={{ cursor: canEdit ? undefined : "default" }}
+        onMouseDown={(e) => { if (!canEdit) e.preventDefault(); }}
         onFocus={() => {
           if (canEdit) {
             setEditingTitle(true);
@@ -237,10 +239,17 @@ export default function ChecklistItem({
           }
         }}
         onChange={(e) => setTitleValue(e.target.value)}
-        onBlur={saveTitle}
+        onBlur={() => {
+          saveTitle();
+          if (titleRef.current) titleRef.current.scrollLeft = 0;
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") { e.preventDefault(); saveTitle(); }
-          if (e.key === "Escape") { setTitleValue(item.title); setEditingTitle(false); }
+          if (e.key === "Escape") {
+            setTitleValue(item.title);
+            setEditingTitle(false);
+            if (titleRef.current) titleRef.current.scrollLeft = 0;
+          }
         }}
       />
 
@@ -275,6 +284,7 @@ export default function ChecklistItem({
             ref={dateRef}
             className={styles.dueDateInput}
             type={item.reusable ? "text" : "date"}
+            maxLength={item.reusable ? 10 : undefined}
             value={dateValue}
             autoFocus
             onChange={(e) => setDateValue(e.target.value)}
@@ -383,8 +393,12 @@ export default function ChecklistItem({
               }
             }}
             renderItem={(u) => (
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span className={styles.assigneeAvatar}>{u.displayName.charAt(0).toUpperCase()}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, color: "#e2e8f0" }}>
+                <span style={{
+                  width: 16, height: 16, borderRadius: "50%", background: "#3b82f6", color: "#fff",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9, fontWeight: 600, flexShrink: 0,
+                }}>{u.displayName.charAt(0).toUpperCase()}</span>
                 {u.displayName}
               </span>
             )}

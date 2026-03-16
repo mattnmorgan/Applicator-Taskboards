@@ -550,6 +550,12 @@
   color: #fbbf24;
 }
 
+.dueBadge.dueFuture {
+  background: #00200a1a;
+  border-color: #22c55e40;
+  color: #4ade80;
+}
+
 .dueBadge.overdue {
   background: #3f00001a;
   border-color: #ef444440;
@@ -576,7 +582,7 @@
   opacity: 0;
   transition: opacity 0.15s;
   flex-shrink: 0;
-  width: 160px;
+  width: 112px;
   justify-content: flex-end;
 }
 
@@ -936,7 +942,7 @@
   background: #1e293b;
   border: 1px solid #334155;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
@@ -1003,19 +1009,33 @@
 }
 
 .widgetItems {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
+  max-height: 175px;
 }
 
 .widgetItem {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   padding: 6px 0;
   border-bottom: 1px solid #1e293b;
+}
+
+.widgetCheckbox {
+  width: 13px;
+  height: 13px;
+  border: 1.5px solid #475569;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+
+.widgetCheckbox:hover {
+  border-color: #3b82f6;
 }
 
 .widgetItem:last-child {
@@ -1027,6 +1047,10 @@
   font-size: 12px;
   color: #e2e8f0;
   line-height: 1.4;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .widgetItemMeta {

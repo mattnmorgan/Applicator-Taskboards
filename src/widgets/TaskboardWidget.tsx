@@ -25,6 +25,7 @@ export default function TaskboardWidget({ settings }: Props) {
   const [items, setItems] = useState<WidgetItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [accessError, setAccessError] = useState(false);
+  const [accessLevel, setAccessLevel] = useState<"owner" | "editor" | "viewer" | null>(null);
 
   const checklistId = settings?.checklistId?.trim();
   const lookahead = settings?.lookahead || "none";
@@ -42,6 +43,7 @@ export default function TaskboardWidget({ settings }: Props) {
         if (data) {
           setChecklistName(data.checklistName);
           setItems(data.items || []);
+          setAccessLevel(data.accessLevel || null);
         }
       })
       .catch(() => setAccessError(true))
@@ -59,6 +61,7 @@ export default function TaskboardWidget({ settings }: Props) {
   }
 
   const today = new Date().toISOString().split("T")[0];
+  const canCheck = accessLevel === "owner" || accessLevel === "editor";
 
   const formatDate = (d: string | null, reusable: boolean) => {
     if (!d) return null;
@@ -67,6 +70,26 @@ export default function TaskboardWidget({ settings }: Props) {
     if (isNaN(date.getTime())) return d;
     if (d === today) return "Today";
     return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  };
+
+  const toggleComplete = async (item: WidgetItem) => {
+    if (!canCheck) return;
+    const newVal = !item.complete;
+    // Optimistic: remove from list (completed items are hidden in widget)
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    try {
+      const res = await fetch(`/api/tasklist/items/${item.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ complete: newVal }),
+      });
+      if (!res.ok) {
+        // Rollback
+        setItems((prev) => [item, ...prev]);
+      }
+    } catch {
+      setItems((prev) => [item, ...prev]);
+    }
   };
 
   return (
@@ -97,6 +120,13 @@ export default function TaskboardWidget({ settings }: Props) {
             const isToday = item.dueDate === today && !item.reusable;
             return (
               <div key={item.id} className={styles.widgetItem}>
+                {canCheck && (
+                  <div
+                    className={styles.widgetCheckbox}
+                    onClick={() => toggleComplete(item)}
+                    title="Mark complete"
+                  />
+                )}
                 <div className={styles.widgetItemTitle}>
                   {item.title}
                   {item.assigneeName && (

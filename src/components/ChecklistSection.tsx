@@ -159,6 +159,8 @@ export default function ChecklistSection({
           className={styles.sectionName}
           value={editingName ? nameValue : section.name}
           readOnly={!editingName || !canEdit}
+          style={{ cursor: canEdit ? undefined : "default" }}
+          onMouseDown={(e) => { if (!canEdit) e.preventDefault(); }}
           onFocus={() => {
             if (canEdit) {
               setEditingName(true);
