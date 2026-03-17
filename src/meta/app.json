@@ -4,7 +4,7 @@
   "version": {
     "major": 1,
     "minor": 0,
-    "dev": 0
+    "dev": 1
   },
   "author": "Matthew Morgan",
   "contactEmail": "matthew@morgantech.info",
@@ -318,6 +318,13 @@
             { "value": "168", "label": "1 week" },
             { "value": "none", "label": "All incomplete" }
           ]
+        },
+        {
+          "name": "maxItems",
+          "label": "Items to display",
+          "type": "number",
+          "defaultValue": "5",
+          "placeholder": "5"
         }
       ]
     }

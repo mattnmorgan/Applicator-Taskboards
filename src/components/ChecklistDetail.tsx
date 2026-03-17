@@ -416,6 +416,24 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
     }
   };
 
+  const handleResetReusable = async () => {
+    if (!checklist) return;
+    const completeReusable = checklist.sections
+      .flatMap((s) => s.items)
+      .filter((i) => i.reusable && i.complete);
+    await Promise.all(
+      completeReusable.map((i) =>
+        fetch(`/api/tasklist/items/${i.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ complete: false }),
+        }).then((res) => {
+          if (res.ok) updateItemInState(i.id, { complete: false });
+        }),
+      ),
+    );
+  };
+
   // ─── Section drag-and-drop ──────────────────────────────────
 
   const handleSectionDragStart = (e: React.DragEvent, sectionId: string) => {
@@ -478,6 +496,9 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
     (a, b) => a.order - b.order,
   );
   const canEdit = checklist.access === "owner" || checklist.access === "editor";
+  const hasCompleteReusable = checklist.sections
+    .flatMap((s) => s.items)
+    .some((i) => i.reusable && i.complete);
 
   return (
     <div className={styles.page}>
@@ -516,6 +537,16 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
             subvariant="info"
             placement="bottom"
           />
+
+          {canEdit && hasCompleteReusable && (
+            <ButtonIcon
+              name="refresh"
+              iconSize={16}
+              label="Reset Reusable Items"
+              onClick={handleResetReusable}
+              placement="bottom"
+            />
+          )}
 
           {checklist.access === "owner" && (
             <ButtonIcon

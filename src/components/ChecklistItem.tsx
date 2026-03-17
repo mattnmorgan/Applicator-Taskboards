@@ -10,6 +10,7 @@ import {
 import styles from "@/src/apps/Taskboard.module.css";
 import { ItemData } from "@/src/types/ItemData";
 import { SystemUser } from "@/src/types/SystemUser";
+import { resolveReusableDate, getLocalToday } from "@/src/lib/reusable-date";
 
 interface Props {
   item: ItemData;
@@ -181,10 +182,20 @@ export default function ChecklistItem({
   };
 
   const getDueBadgeClass = () => {
-    if (item.reusable || !item.dueDate) return styles.dueBadge;
-    const today = new Date().toISOString().split("T")[0];
-    if (item.dueDate < today) return `${styles.dueBadge} ${styles.overdue}`;
-    if (item.dueDate === today) return `${styles.dueBadge} ${styles.dueToday}`;
+    if (!item.dueDate) return styles.dueBadge;
+    const today = getLocalToday();
+    if (!item.reusable) {
+      if (item.dueDate < today) return `${styles.dueBadge} ${styles.overdue}`;
+      if (item.dueDate === today) return `${styles.dueBadge} ${styles.dueToday}`;
+      return `${styles.dueBadge} ${styles.dueFuture}`;
+    }
+    // Reusable: completed this month = grey
+    if (item.complete) return styles.dueBadge;
+    // Resolve ordinal/EOM date for coloring
+    const resolved = resolveReusableDate(item.dueDate);
+    if (!resolved) return styles.dueBadge;
+    if (resolved < today) return `${styles.dueBadge} ${styles.overdue}`;
+    if (resolved === today) return `${styles.dueBadge} ${styles.dueToday}`;
     return `${styles.dueBadge} ${styles.dueFuture}`;
   };
 
@@ -326,6 +337,26 @@ export default function ChecklistItem({
         )}
       </div>
 
+      {/* Reusable toggle — always visible, dedicated column */}
+      <div className={styles.itemReusableSlot}>
+        {canEdit && (!item.complete || item.reusable) && (
+          <ButtonIcon
+            name="refresh"
+            iconSize={13}
+            label={
+              item.reusable
+                ? "Disable reusable"
+                : "Make reusable (stays after completion)"
+            }
+            onClick={toggleReusable}
+            size="sm"
+            placement="top"
+            active={item.reusable}
+            subvariant="info"
+          />
+        )}
+      </div>
+
       {/* Action buttons (visible on hover) */}
       <div ref={actionsRef} className={styles.itemActions}>
         {!item.assigneeId && canAssign && !item.complete && (
@@ -363,23 +394,6 @@ export default function ChecklistItem({
               placement="top"
             />
           )}
-
-        {canEdit && (!item.complete || item.reusable) && (
-          <ButtonIcon
-            name="refresh"
-            iconSize={13}
-            label={
-              item.reusable
-                ? "Disable reusable"
-                : "Make reusable (stays after completion)"
-            }
-            onClick={toggleReusable}
-            size="sm"
-            placement="top"
-            active={item.reusable}
-            subvariant="info"
-          />
-        )}
 
         {(!item.complete || item.reusable) && (
           <ButtonIcon

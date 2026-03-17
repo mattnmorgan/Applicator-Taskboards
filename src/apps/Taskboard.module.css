@@ -527,6 +527,14 @@
   align-items: center;
 }
 
+.itemReusableSlot {
+  width: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .itemTitle {
   font-size: 13px;
   color: #e2e8f0;

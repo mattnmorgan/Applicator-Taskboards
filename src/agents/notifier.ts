@@ -33,6 +33,35 @@ function toDateString(d: Date): string {
   return d.toISOString().split("T")[0];
 }
 
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+/** Resolves a reusable item dueDate string (e.g. "1st", "EOM") to YYYY-MM-DD for the current month. */
+function resolveReusableDate(dueDate: string): string | null {
+  if (!dueDate) return null;
+  const upper = dueDate.trim().toUpperCase();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+
+  if (upper === "EOM") {
+    return `${year}-${pad(month + 1)}-${pad(lastDayOfMonth)}`;
+  }
+
+  const match = dueDate.trim().match(/^(\d{1,2})(st|nd|rd|th)$/i);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    if (day >= 1 && day <= 31) {
+      const clampedDay = Math.min(day, lastDayOfMonth);
+      return `${year}-${pad(month + 1)}-${pad(clampedDay)}`;
+    }
+  }
+
+  return null;
+}
+
 async function main() {
   await sdk("logger.info", { message: "Notifier agent starting" });
 
@@ -43,7 +72,7 @@ async function main() {
   const activeUsers = await sdk<any[]>("system.getUsers", { includeInactive: false });
   const activeUserIds = new Set(activeUsers.map((u: any) => u.id));
 
-  // Fetch all non-reusable, incomplete items with a due date of today or tomorrow
+  // Fetch all incomplete items and filter to those due today or tomorrow
   const itemResult = await sdk<{ records: any[]; total: number }>("records.list", {
     table: "item",
     limit: 10000,
@@ -51,9 +80,14 @@ async function main() {
 
   const dueItems = itemResult.records.filter((r: any) => {
     const d = r.data;
-    if (d.reusable) return false;
     if (d.complete) return false;
-    return d.dueDate === today || d.dueDate === tomorrow;
+    if (!d.dueDate) return false;
+    if (!d.reusable) {
+      return d.dueDate === today || d.dueDate === tomorrow;
+    }
+    // Reusable: resolve ordinal/EOM date and compare
+    const resolved = resolveReusableDate(d.dueDate);
+    return resolved === today || resolved === tomorrow;
   });
 
   if (dueItems.length === 0) {
@@ -97,7 +131,8 @@ async function main() {
 
   for (const item of dueItems) {
     const d = item.data;
-    const type: "warning" | "info" = d.dueDate === today ? "warning" : "info";
+    const effectiveDate = d.reusable ? resolveReusableDate(d.dueDate) : d.dueDate;
+    const type: "warning" | "info" = effectiveDate === today ? "warning" : "info";
     const usersToNotify = new Set<string>();
 
     // Assignee always gets notified
