@@ -239,6 +239,7 @@
   font-size: 13px;
   outline: none;
   width: 100%;
+  box-sizing: border-box;
   transition: border-color 0.15s;
   margin-bottom: 16px;
 }

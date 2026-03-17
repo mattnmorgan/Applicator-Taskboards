@@ -22,12 +22,18 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   const [showShareModal, setShowShareModal] = useState(false);
 
   // Section drag state
-  const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
-  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(null);
+  const [draggingSectionId, setDraggingSectionId] = useState<string | null>(
+    null,
+  );
+  const [dragOverSectionId, setDragOverSectionId] = useState<string | null>(
+    null,
+  );
 
   // Item drag state (lifted here for cross-section support)
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
-  const [draggingItemSectionId, setDraggingItemSectionId] = useState<string | null>(null);
+  const [draggingItemSectionId, setDraggingItemSectionId] = useState<
+    string | null
+  >(null);
   const [dragOverItemId, setDragOverItemId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -55,11 +61,16 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   const toggleChecklistSubscription = async () => {
     if (!checklist) return;
     if (checklist.subscribed && checklist.subscriptionId) {
-      const res = await fetch(`/api/tasklist/subscriptions/${checklist.subscriptionId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/tasklist/subscriptions/${checklist.subscriptionId}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (res.ok) {
-        setChecklist((prev) => prev ? { ...prev, subscribed: false, subscriptionId: null } : prev);
+        setChecklist((prev) =>
+          prev ? { ...prev, subscribed: false, subscriptionId: null } : prev,
+        );
       }
     } else {
       const res = await fetch("/api/tasklist/subscriptions", {
@@ -69,7 +80,9 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
       });
       if (res.ok) {
         const data = await res.json();
-        setChecklist((prev) => prev ? { ...prev, subscribed: true, subscriptionId: data.id } : prev);
+        setChecklist((prev) =>
+          prev ? { ...prev, subscribed: true, subscriptionId: data.id } : prev,
+        );
       }
     }
   };
@@ -77,9 +90,12 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   const toggleItemSubscription = async (item: ItemData) => {
     if (!checklist) return;
     if (item.subscribed && item.subscriptionId) {
-      const res = await fetch(`/api/tasklist/subscriptions/${item.subscriptionId}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `/api/tasklist/subscriptions/${item.subscriptionId}`,
+        {
+          method: "DELETE",
+        },
+      );
       if (res.ok) {
         updateItemInState(item.id, { subscribed: false, subscriptionId: null });
       }
@@ -91,14 +107,20 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
       });
       if (res.ok) {
         const data = await res.json();
-        updateItemInState(item.id, { subscribed: true, subscriptionId: data.id });
+        updateItemInState(item.id, {
+          subscribed: true,
+          subscriptionId: data.id,
+        });
       }
     }
   };
 
   // ─── Item handlers ──────────────────────────────────────────
 
-  const updateItemInState = (id: string, updates: Partial<ItemData & { assigneeName?: string }>) => {
+  const updateItemInState = (
+    id: string,
+    updates: Partial<ItemData & { assigneeName?: string }>,
+  ) => {
     setChecklist((prev) => {
       if (!prev) return prev;
       return {
@@ -125,7 +147,9 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   };
 
   const handleItemDelete = async (itemId: string) => {
-    const res = await fetch(`/api/tasklist/items/${itemId}`, { method: "DELETE" });
+    const res = await fetch(`/api/tasklist/items/${itemId}`, {
+      method: "DELETE",
+    });
     if (res.ok) deleteItemFromState(itemId);
   };
 
@@ -181,7 +205,10 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
     setDragOverItemId(itemId);
   };
 
-  const handleItemDrop = async (targetItemId: string, targetSectionId: string) => {
+  const handleItemDrop = async (
+    targetItemId: string,
+    targetSectionId: string,
+  ) => {
     if (!draggingItemId || !draggingItemSectionId || !checklist) {
       clearItemDrag();
       return;
@@ -194,7 +221,10 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
     if (draggingItemSectionId === targetSectionId) {
       // Same section: reorder incomplete items
       const section = checklist.sections.find((s) => s.id === targetSectionId);
-      if (!section) { clearItemDrag(); return; }
+      if (!section) {
+        clearItemDrag();
+        return;
+      }
 
       const incomplete = section.items
         .filter((i) => !i.complete || i.reusable)
@@ -202,7 +232,10 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
 
       const fromIdx = incomplete.findIndex((i) => i.id === draggingItemId);
       const toIdx = incomplete.findIndex((i) => i.id === targetItemId);
-      if (fromIdx === -1 || toIdx === -1) { clearItemDrag(); return; }
+      if (fromIdx === -1 || toIdx === -1) {
+        clearItemDrag();
+        return;
+      }
 
       const newList = [...incomplete];
       const [moved] = newList.splice(fromIdx, 1);
@@ -231,23 +264,39 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
         await fetch(`/api/tasklist/sections/${targetSectionId}/items/reorder`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: updated.map((i) => ({ id: i.id, order: i.order })) }),
+          body: JSON.stringify({
+            items: updated.map((i) => ({ id: i.id, order: i.order })),
+          }),
         });
       } catch {}
     } else {
       // Cross-section: move item before targetItem in target section
-      await moveItemToSection(draggingItemId, draggingItemSectionId, targetSectionId, targetItemId);
+      await moveItemToSection(
+        draggingItemId,
+        draggingItemSectionId,
+        targetSectionId,
+        targetItemId,
+      );
     }
 
     clearItemDrag();
   };
 
   const handleItemDropOnSection = async (targetSectionId: string) => {
-    if (!draggingItemId || !draggingItemSectionId || draggingItemSectionId === targetSectionId) {
+    if (
+      !draggingItemId ||
+      !draggingItemSectionId ||
+      draggingItemSectionId === targetSectionId
+    ) {
       clearItemDrag();
       return;
     }
-    await moveItemToSection(draggingItemId, draggingItemSectionId, targetSectionId, null);
+    await moveItemToSection(
+      draggingItemId,
+      draggingItemSectionId,
+      targetSectionId,
+      null,
+    );
     clearItemDrag();
   };
 
@@ -258,8 +307,12 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
     beforeItemId: string | null,
   ) => {
     if (!checklist) return;
-    const sourceSection = checklist.sections.find((s) => s.id === sourceSectionId);
-    const targetSection = checklist.sections.find((s) => s.id === targetSectionId);
+    const sourceSection = checklist.sections.find(
+      (s) => s.id === sourceSectionId,
+    );
+    const targetSection = checklist.sections.find(
+      (s) => s.id === targetSectionId,
+    );
     if (!sourceSection || !targetSection) return;
 
     const movingItem = sourceSection.items.find((i) => i.id === itemId);
@@ -287,7 +340,9 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
             return { ...s, items: s.items.filter((i) => i.id !== itemId) };
           }
           if (s.id === targetSectionId) {
-            const completeItems = s.items.filter((i) => i.complete && !i.reusable);
+            const completeItems = s.items.filter(
+              (i) => i.complete && !i.reusable,
+            );
             return { ...s, items: [...reordered, ...completeItems] };
           }
           return s;
@@ -321,7 +376,9 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   };
 
   const handleSectionDelete = async (id: string) => {
-    const res = await fetch(`/api/tasklist/sections/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/tasklist/sections/${id}`, {
+      method: "DELETE",
+    });
     if (res.ok) {
       setChecklist((prev) => {
         if (!prev) return prev;
@@ -331,19 +388,29 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   };
 
   const handleAddSection = async () => {
-    const res = await fetch(`/api/tasklist/checklists/${checklistId}/sections`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "New Section" }),
-    });
+    const res = await fetch(
+      `/api/tasklist/checklists/${checklistId}/sections`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "New Section" }),
+      },
+    );
     if (res.ok) {
       const data = await res.json();
-      const newSection: SectionData = { id: data.id, name: data.name, order: data.order, items: [] };
+      const newSection: SectionData = {
+        id: data.id,
+        name: data.name,
+        order: data.order,
+        items: [],
+      };
       setChecklist((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          sections: [...prev.sections, newSection].sort((a, b) => a.order - b.order),
+          sections: [...prev.sections, newSection].sort(
+            (a, b) => a.order - b.order,
+          ),
         };
       });
     }
@@ -387,7 +454,9 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
       await fetch(`/api/tasklist/checklists/${checklistId}/sections/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections: updated.map((s) => ({ id: s.id, order: s.order })) }),
+        body: JSON.stringify({
+          sections: updated.map((s) => ({ id: s.id, order: s.order })),
+        }),
       });
     } catch {}
   };
@@ -402,9 +471,12 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   }, [load]);
 
   if (loading) return <div className={styles.loading}>Loading…</div>;
-  if (!checklist) return <div className={styles.loading}>Checklist not found.</div>;
+  if (!checklist)
+    return <div className={styles.loading}>Checklist not found.</div>;
 
-  const sortedSections = [...checklist.sections].sort((a, b) => a.order - b.order);
+  const sortedSections = [...checklist.sections].sort(
+    (a, b) => a.order - b.order,
+  );
   const canEdit = checklist.access === "owner" || checklist.access === "editor";
 
   return (
@@ -434,7 +506,11 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
           <ButtonIcon
             name="eye"
             iconSize={16}
-            label={checklist.subscribed ? "Unwatch checklist" : "Watch checklist for notifications"}
+            label={
+              checklist.subscribed
+                ? "Unwatch checklist"
+                : "Watch checklist for notifications"
+            }
             onClick={toggleChecklistSubscription}
             active={checklist.subscribed}
             subvariant="info"
@@ -445,7 +521,7 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
             <ButtonIcon
               name="settings"
               iconSize={16}
-              label="Share settings"
+              label="Settings"
               onClick={() => setShowShareModal(true)}
               placement="bottom"
             />
@@ -459,7 +535,9 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
           {sortedSections.length === 0 && (
             <div className={styles.emptyState}>
               <span className={styles.emptyStateTitle}>No sections yet</span>
-              <span className={styles.emptyStateDesc}>Add a section to start organizing your checklist.</span>
+              <span className={styles.emptyStateDesc}>
+                Add a section to start organizing your checklist.
+              </span>
             </div>
           )}
 
@@ -478,9 +556,13 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
               onItemSubscriptionToggle={toggleItemSubscription}
               draggingItemId={draggingItemId}
               dragOverItemId={dragOverItemId}
-              onItemDragStart={(itemId) => handleItemDragStart(itemId, section.id)}
+              onItemDragStart={(itemId) =>
+                handleItemDragStart(itemId, section.id)
+              }
               onItemDragOver={handleItemDragOver}
-              onItemDrop={(targetItemId) => handleItemDrop(targetItemId, section.id)}
+              onItemDrop={(targetItemId) =>
+                handleItemDrop(targetItemId, section.id)
+              }
               onItemDragEnd={handleItemDragEnd}
               onItemDropOnSection={() => handleItemDropOnSection(section.id)}
               dragOver={dragOverSectionId === section.id}
@@ -494,7 +576,10 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
 
           {canEdit && (
             <div className={styles.addSectionRow}>
-              <button className={styles.addSectionBtn} onClick={handleAddSection}>
+              <button
+                className={styles.addSectionBtn}
+                onClick={handleAddSection}
+              >
                 <Icon name="plus" size={14} /> Add Section
               </button>
             </div>
@@ -505,9 +590,16 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
       {showShareModal && (
         <ShareModal
           checklistId={checklistId}
+          checklistName={checklist.name}
+          checklistDescription={checklist.description || ""}
           onClose={() => setShowShareModal(false)}
           users={users}
           currentUserId={checklist.currentUserId}
+          onDetailsUpdate={(name, description) => {
+            setChecklist((prev) =>
+              prev ? { ...prev, name, description } : prev,
+            );
+          }}
         />
       )}
     </div>
