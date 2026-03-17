@@ -29,18 +29,44 @@ function sdk<T = any>(method: string, params: Record<string, any>): Promise<T> {
   });
 }
 
-function toDateString(d: Date): string {
-  return d.toISOString().split("T")[0];
-}
-
 function pad(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-/** Resolves a reusable item dueDate string (e.g. "1st", "EOM") to YYYY-MM-DD for the current month. */
+function getLocalToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+const MONTH_NAMES: Record<string, number> = {
+  january: 0, jan: 0,
+  february: 1, feb: 1,
+  march: 2, mar: 2,
+  april: 3, apr: 3,
+  may: 4,
+  june: 5, jun: 5,
+  july: 6, jul: 6,
+  august: 7, aug: 7,
+  september: 8, sep: 8, sept: 8,
+  october: 9, oct: 9,
+  november: 10, nov: 10,
+  december: 11, dec: 11,
+};
+
+function resolveAnnualDate(year: number, month: number, day: number): string {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const clampedDay = Math.min(day, lastDay);
+  return `${year}-${pad(month + 1)}-${pad(clampedDay)}`;
+}
+
+/**
+ * Resolves a reusable item dueDate string to YYYY-MM-DD.
+ * Supports: "1", "1st", "EOM", "jun 1", "jun 1st", "june 15th", etc.
+ */
 function resolveReusableDate(dueDate: string): string | null {
   if (!dueDate) return null;
-  const upper = dueDate.trim().toUpperCase();
+  const trimmed = dueDate.trim();
+  const upper = trimmed.toUpperCase();
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
@@ -50,12 +76,23 @@ function resolveReusableDate(dueDate: string): string | null {
     return `${year}-${pad(month + 1)}-${pad(lastDayOfMonth)}`;
   }
 
-  const match = dueDate.trim().match(/^(\d{1,2})(st|nd|rd|th)$/i);
-  if (match) {
-    const day = parseInt(match[1], 10);
+  // Day-only: "1", "1st", "20th"
+  const dayOnly = trimmed.match(/^(\d{1,2})(st|nd|rd|th)?$/i);
+  if (dayOnly) {
+    const day = parseInt(dayOnly[1], 10);
     if (day >= 1 && day <= 31) {
       const clampedDay = Math.min(day, lastDayOfMonth);
       return `${year}-${pad(month + 1)}-${pad(clampedDay)}`;
+    }
+  }
+
+  // Month + day: "jun 1", "jun 1st", "june 15th"
+  const monthDay = trimmed.match(/^([a-zA-Z]+)\s+(\d{1,2})(st|nd|rd|th)?$/i);
+  if (monthDay) {
+    const targetMonth = MONTH_NAMES[monthDay[1].toLowerCase()];
+    const day = parseInt(monthDay[2], 10);
+    if (targetMonth !== undefined && day >= 1 && day <= 31) {
+      return resolveAnnualDate(year, targetMonth, day);
     }
   }
 
@@ -65,8 +102,10 @@ function resolveReusableDate(dueDate: string): string | null {
 async function main() {
   await sdk("logger.info", { message: "Notifier agent starting" });
 
-  const today = toDateString(new Date());
-  const tomorrow = toDateString(new Date(Date.now() + 86400000));
+  const today = getLocalToday();
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = `${tomorrowDate.getFullYear()}-${pad(tomorrowDate.getMonth() + 1)}-${pad(tomorrowDate.getDate())}`;
 
   // Fetch all active users so we only notify users who are still active
   const activeUsers = await sdk<any[]>("system.getUsers", { includeInactive: false });
