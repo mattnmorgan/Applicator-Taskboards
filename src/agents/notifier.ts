@@ -86,6 +86,16 @@ function resolveReusableDate(dueDate: string): string | null {
     }
   }
 
+  // MM/DD or MM-DD: "03/15", "3-15"
+  const numericMonthDay = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+  if (numericMonthDay) {
+    const m = parseInt(numericMonthDay[1], 10);
+    const day = parseInt(numericMonthDay[2], 10);
+    if (m >= 1 && m <= 12 && day >= 1 && day <= 31) {
+      return resolveAnnualDate(year, m - 1, day);
+    }
+  }
+
   // Month + day: "jun 1", "jun 1st", "june 15th"
   const monthDay = trimmed.match(/^([a-zA-Z]+)\s+(\d{1,2})(st|nd|rd|th)?$/i);
   if (monthDay) {

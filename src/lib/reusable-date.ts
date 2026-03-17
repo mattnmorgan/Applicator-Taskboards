@@ -25,8 +25,9 @@ const MONTH_NAMES: Record<string, number> = {
  * Supported formats:
  *   "1" | "1st"           → 1st of the current month (monthly recurrence)
  *   "EOM"                 → last day of the current month
- *   "jun 1" | "jun 1st"   → June 1st; rolls to next year if already past
+ *   "jun 1" | "jun 1st"   → June 1st of the current year
  *   "june 1st" | "january 15" etc. — full month names also accepted
+ *   "03/15" | "03-15"     → March 15th of the current year
  *
  * Returns null if the value is not recognized.
  */
@@ -52,6 +53,16 @@ export function resolveReusableDate(dueDate: string): string | null {
     if (day >= 1 && day <= 31) {
       const clampedDay = Math.min(day, lastDayOfMonth);
       return `${year}-${pad(month + 1)}-${pad(clampedDay)}`;
+    }
+  }
+
+  // MM/DD or MM-DD: "03/15", "3-15"
+  const numericMonthDay = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+  if (numericMonthDay) {
+    const m = parseInt(numericMonthDay[1], 10);
+    const day = parseInt(numericMonthDay[2], 10);
+    if (m >= 1 && m <= 12 && day >= 1 && day <= 31) {
+      return resolveAnnualDate(year, m - 1, day);
     }
   }
 
