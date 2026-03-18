@@ -7,6 +7,7 @@ import { SectionData } from "@/src/types/SectionData";
 import { ItemData } from "@/src/types/ItemData";
 import { SystemUser } from "@/src/types/SystemUser";
 import ChecklistItem from "./ChecklistItem";
+import ActionMenu, { MenuAction } from "./ActionMenu";
 
 interface Props {
   section: SectionData;
@@ -15,6 +16,7 @@ interface Props {
   users: SystemUser[];
   onSectionRename: (id: string, name: string) => void;
   onSectionDelete: (id: string) => void;
+  onSectionResetReusable: (id: string) => void;
   onItemUpdate: (id: string, updates: Partial<ItemData & { assigneeName?: string }>) => void;
   onItemDelete: (id: string) => void;
   onItemAdd: (sectionId: string, title: string) => void;
@@ -43,6 +45,7 @@ export default function ChecklistSection({
   users,
   onSectionRename,
   onSectionDelete,
+  onSectionResetReusable,
   onItemUpdate,
   onItemDelete,
   onItemAdd,
@@ -71,6 +74,7 @@ export default function ChecklistSection({
 
   const incompleteItems = section.items.filter((i) => !i.complete || i.reusable).sort((a, b) => a.order - b.order);
   const completeItems = section.items.filter((i) => i.complete && !i.reusable).sort((a, b) => a.order - b.order);
+  const hasCompleteReusable = section.items.some((i) => i.reusable && i.complete);
 
   const saveName = useCallback(async () => {
     const trimmed = nameValue.trim();
@@ -176,15 +180,44 @@ export default function ChecklistSection({
         />
 
         {canEdit && (
-          <ButtonIcon
-            name="trash"
-            iconSize={13}
-            label="Delete section"
-            onClick={() => onSectionDelete(section.id)}
-            size="sm"
-            subvariant="danger"
-            placement="top"
-          />
+          <>
+            <div className={styles.desktopActions}>
+              {hasCompleteReusable && (
+                <ButtonIcon
+                  name="refresh"
+                  iconSize={13}
+                  label="Reset reusable items"
+                  onClick={() => onSectionResetReusable(section.id)}
+                  size="sm"
+                  subvariant="info"
+                  placement="top"
+                />
+              )}
+              <ButtonIcon
+                name="trash"
+                iconSize={13}
+                label="Delete section"
+                onClick={() => onSectionDelete(section.id)}
+                size="sm"
+                subvariant="danger"
+                placement="top"
+              />
+            </div>
+            <ActionMenu actions={[
+              ...(hasCompleteReusable ? [{
+                label: "Reset reusable items",
+                icon: "refresh",
+                onClick: () => onSectionResetReusable(section.id),
+                variant: "info" as MenuAction["variant"],
+              }] : []),
+              {
+                label: "Delete section",
+                icon: "trash",
+                onClick: () => onSectionDelete(section.id),
+                variant: "danger" as MenuAction["variant"],
+              },
+            ]} />
+          </>
         )}
       </div>
 

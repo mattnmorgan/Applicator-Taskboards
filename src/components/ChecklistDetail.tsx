@@ -9,6 +9,7 @@ import { ItemData } from "@/src/types/ItemData";
 import { SystemUser } from "@/src/types/SystemUser";
 import ChecklistSection from "./ChecklistSection";
 import ShareModal from "./ShareModal";
+import ActionMenu, { MenuAction } from "./ActionMenu";
 
 interface Props {
   checklistId: string;
@@ -434,6 +435,24 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
     );
   };
 
+  const handleResetSectionReusable = async (sectionId: string) => {
+    if (!checklist) return;
+    const section = checklist.sections.find((s) => s.id === sectionId);
+    if (!section) return;
+    const completeReusable = section.items.filter((i) => i.reusable && i.complete);
+    await Promise.all(
+      completeReusable.map((i) =>
+        fetch(`/api/tasklist/items/${i.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ complete: false }),
+        }).then((res) => {
+          if (res.ok) updateItemInState(i.id, { complete: false });
+        }),
+      ),
+    );
+  };
+
   // ─── Section drag-and-drop ──────────────────────────────────
 
   const handleSectionDragStart = (e: React.DragEvent, sectionId: string) => {
@@ -516,47 +535,74 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
         </div>
 
         <div className={styles.headerActions}>
-          <ButtonIcon
-            name="copy"
-            iconSize={14}
-            label="Copy checklist ID"
-            onClick={() => navigator.clipboard.writeText(checklistId)}
-            placement="bottom"
-          />
-
-          <ButtonIcon
-            name="eye"
-            iconSize={16}
-            label={
-              checklist.subscribed
-                ? "Unwatch checklist"
-                : "Watch checklist for notifications"
-            }
-            onClick={toggleChecklistSubscription}
-            active={checklist.subscribed}
-            subvariant="info"
-            placement="bottom"
-          />
-
-          {canEdit && hasCompleteReusable && (
+          <div className={styles.desktopActions}>
             <ButtonIcon
-              name="refresh"
-              iconSize={16}
-              label="Reset Reusable Items"
-              onClick={handleResetReusable}
+              name="copy"
+              iconSize={14}
+              label="Copy checklist ID"
+              onClick={() => navigator.clipboard.writeText(checklistId)}
               placement="bottom"
             />
-          )}
 
-          {checklist.access === "owner" && (
             <ButtonIcon
-              name="settings"
+              name="eye"
               iconSize={16}
-              label="Settings"
-              onClick={() => setShowShareModal(true)}
+              label={
+                checklist.subscribed
+                  ? "Unwatch checklist"
+                  : "Watch checklist for notifications"
+              }
+              onClick={toggleChecklistSubscription}
+              active={checklist.subscribed}
+              subvariant="info"
               placement="bottom"
             />
-          )}
+
+            {canEdit && hasCompleteReusable && (
+              <ButtonIcon
+                name="refresh"
+                iconSize={16}
+                label="Reset Reusable Items"
+                onClick={handleResetReusable}
+                placement="bottom"
+              />
+            )}
+
+            {checklist.access === "owner" && (
+              <ButtonIcon
+                name="settings"
+                iconSize={16}
+                label="Settings"
+                onClick={() => setShowShareModal(true)}
+                placement="bottom"
+              />
+            )}
+          </div>
+
+          <ActionMenu actions={[
+            {
+              label: "Copy checklist ID",
+              icon: "copy",
+              onClick: () => navigator.clipboard.writeText(checklistId),
+            },
+            {
+              label: checklist.subscribed ? "Unwatch checklist" : "Watch checklist",
+              icon: "eye",
+              onClick: toggleChecklistSubscription,
+              active: checklist.subscribed,
+              variant: "info" as MenuAction["variant"],
+            },
+            ...(canEdit && hasCompleteReusable ? [{
+              label: "Reset Reusable Items",
+              icon: "refresh",
+              onClick: handleResetReusable,
+            }] : []),
+            ...(checklist.access === "owner" ? [{
+              label: "Settings",
+              icon: "settings",
+              onClick: () => setShowShareModal(true),
+            }] : []),
+          ]} />
         </div>
       </div>
 
@@ -581,6 +627,7 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
               users={users}
               onSectionRename={handleSectionRename}
               onSectionDelete={handleSectionDelete}
+              onSectionResetReusable={handleResetSectionReusable}
               onItemUpdate={updateItemInState}
               onItemDelete={handleItemDelete}
               onItemAdd={handleItemAdd}

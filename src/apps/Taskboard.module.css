@@ -1195,3 +1195,62 @@
   font-size: 12px;
   text-align: center;
 }
+
+/* ─── Mobile sandwich menu ────────────────────────────────────── */
+.desktopActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.actionMenuWrapper {
+  display: none;
+  align-items: center;
+}
+
+.actionMenuTrigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.actionMenuTrigger:hover {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .actionMenuWrapper {
+    display: flex;
+  }
+
+  .desktopActions {
+    display: none !important;
+  }
+
+  /* Item row: hide hover-only actions and dedicated slots */
+  .itemActions {
+    display: none !important;
+  }
+
+  .itemDragHandle {
+    display: none !important;
+  }
+
+  /* Compact due date slot */
+  .itemDueSlot {
+    width: 70px;
+  }
+}

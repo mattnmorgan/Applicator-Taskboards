@@ -11,6 +11,7 @@ import styles from "@/src/apps/Taskboard.module.css";
 import { ItemData } from "@/src/types/ItemData";
 import { SystemUser } from "@/src/types/SystemUser";
 import { resolveReusableDate, getLocalToday } from "@/src/lib/reusable-date";
+import ActionMenu, { MenuAction } from "./ActionMenu";
 
 interface Props {
   item: ItemData;
@@ -356,6 +357,36 @@ export default function ChecklistItem({
           />
         )}
       </div>
+
+      {/* Mobile sandwich menu — always visible on small screens */}
+      <ActionMenu actions={[
+        ...(!item.assigneeId && canAssign && !item.complete ? [{
+          label: "Assign user",
+          icon: "user",
+          onClick: () => {
+            setPickerPos({ top: Math.round(window.innerHeight * 0.25), left: Math.max(8, Math.round((window.innerWidth - 240) / 2)) });
+            setShowAssigneePicker(true);
+          },
+        }] : []),
+        ...((item.dueDate === null || item.dueDate === "") && canEdit && !item.complete ? [{
+          label: "Set due date",
+          icon: "calendar",
+          onClick: () => setEditingDate(true),
+        }] : []),
+        ...(!item.complete || item.reusable ? [{
+          label: item.subscribed ? "Unwatch item" : "Watch item",
+          icon: "eye",
+          onClick: () => onToggleSubscription(item),
+          active: item.subscribed,
+          variant: "info" as MenuAction["variant"],
+        }] : []),
+        ...(canEdit ? [{
+          label: "Delete item",
+          icon: "trash",
+          onClick: () => onDelete(item.id),
+          variant: "danger" as MenuAction["variant"],
+        }] : []),
+      ]} />
 
       {/* Action buttons (visible on hover) */}
       <div ref={actionsRef} className={styles.itemActions}>
