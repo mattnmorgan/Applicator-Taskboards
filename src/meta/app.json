@@ -325,6 +325,16 @@
           "type": "number",
           "defaultValue": "5",
           "placeholder": "5"
+        },
+        {
+          "name": "displayDatelessItems",
+          "label": "Display dateless items",
+          "type": "select",
+          "defaultValue": "false",
+          "options": [
+            { "value": "false", "label": "Hidden by default" },
+            { "value": "true", "label": "Shown by default" }
+          ]
         }
       ]
     }

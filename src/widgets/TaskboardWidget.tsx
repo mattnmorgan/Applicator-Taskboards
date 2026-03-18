@@ -27,6 +27,7 @@ interface Props {
     checklistId?: string;
     lookahead?: string;
     maxItems?: string;
+    displayDatelessItems?: string;
   };
 }
 
@@ -41,11 +42,19 @@ export default function TaskboardWidget({ settings }: Props) {
   const [accessLevel, setAccessLevel] = useState<
     "owner" | "editor" | "viewer" | null
   >(null);
-  const [showNoDueDate, setShowNoDueDate] = useState(false);
+  const [showNoDueDate, setShowNoDueDate] = useState(
+    settings?.displayDatelessItems === "true",
+  );
 
   const checklistId = settings?.checklistId?.trim();
   const lookahead = settings?.lookahead || "none";
   const maxItems = Math.max(1, parseInt(settings?.maxItems || "5", 10) || 5);
+  const defaultShowDateless = settings?.displayDatelessItems === "true";
+
+  useEffect(() => {
+    setShowNoDueDate(defaultShowDateless);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings?.displayDatelessItems]);
 
   useEffect(() => {
     if (!checklistId) return;
