@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { ButtonIcon, Icon } from "@applicator/sdk/components";
+import { ButtonIcon, Button, Icon, Modal, SearchableCombobox } from "@applicator/sdk/components";
 import styles from "@/src/apps/Taskboard.module.css";
 import { ChecklistDetail as ChecklistDetailType } from "@/src/types/ChecklistDetail";
 import { SectionData } from "@/src/types/SectionData";
@@ -21,6 +21,8 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [moveRequest, setMoveRequest] = useState<{ id: string; sectionId: string } | null>(null);
+  const [moveTargetSection, setMoveTargetSection] = useState<SectionData | null>(null);
 
   // Section drag state
   const [draggingSectionId, setDraggingSectionId] = useState<string | null>(
@@ -453,6 +455,31 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
     );
   };
 
+  // ─── Move to section ────────────────────────────────────────
+
+  const handleRequestMoveToSection = (itemId: string) => {
+    if (!checklist) return;
+    const sourceSection = checklist.sections.find((s) =>
+      s.items.some((i) => i.id === itemId),
+    );
+    if (!sourceSection) return;
+    setMoveRequest({ id: itemId, sectionId: sourceSection.id });
+    setMoveTargetSection(null);
+  };
+
+  const confirmMoveToSection = async () => {
+    if (!moveRequest || !moveTargetSection) return;
+    const { id: itemId, sectionId: sourceSectionId } = moveRequest;
+    setMoveRequest(null);
+    setMoveTargetSection(null);
+    await moveItemToSection(itemId, sourceSectionId, moveTargetSection.id, null);
+  };
+
+  const cancelMoveToSection = () => {
+    setMoveRequest(null);
+    setMoveTargetSection(null);
+  };
+
   // ─── Section drag-and-drop ──────────────────────────────────
 
   const handleSectionDragStart = (e: React.DragEvent, sectionId: string) => {
@@ -632,6 +659,7 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
               onItemDelete={handleItemDelete}
               onItemAdd={handleItemAdd}
               onItemSubscriptionToggle={toggleItemSubscription}
+              onItemMoveToSection={canEdit ? handleRequestMoveToSection : undefined}
               draggingItemId={draggingItemId}
               dragOverItemId={dragOverItemId}
               onItemDragStart={(itemId) =>
@@ -664,6 +692,37 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
           )}
         </div>
       </div>
+
+      {moveRequest && checklist && (
+        <Modal
+          header={<span className={styles.modalTitle}>Move to section</span>}
+          footer={
+            <>
+              <Button variant="secondary" onClick={cancelMoveToSection}>Cancel</Button>
+              <Button variant="primary" disabled={!moveTargetSection} onClick={confirmMoveToSection}>Move</Button>
+            </>
+          }
+          closeable
+          onClose={cancelMoveToSection}
+          maxWidth={400}
+        >
+          <div style={{ padding: "8px 4px" }}>
+          <SearchableCombobox<SectionData>
+            items={checklist.sections.filter((s) => s.id !== moveRequest.sectionId)}
+            selectedItems={moveTargetSection ? [moveTargetSection] : []}
+            onSelectionChange={(selected) => setMoveTargetSection(selected[0] ?? null)}
+            renderItem={(section) => (
+              <span style={{ fontSize: 13, color: "#e2e8f0" }}>{section.name}</span>
+            )}
+            filterItem={(section, term) =>
+              section.name.toLowerCase().includes(term.toLowerCase())
+            }
+            getItemKey={(section) => section.id}
+            placeholder="Search sections..."
+          />
+          </div>
+        </Modal>
+      )}
 
       {showShareModal && (
         <ShareModal

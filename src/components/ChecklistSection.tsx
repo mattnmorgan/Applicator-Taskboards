@@ -21,6 +21,7 @@ interface Props {
   onItemDelete: (id: string) => void;
   onItemAdd: (sectionId: string, title: string) => void;
   onItemSubscriptionToggle: (item: ItemData) => void;
+  onItemMoveToSection?: (itemId: string) => void;
   // Item drag state (lifted to ChecklistDetail for cross-section support)
   draggingItemId: string | null;
   dragOverItemId: string | null;
@@ -50,6 +51,7 @@ export default function ChecklistSection({
   onItemDelete,
   onItemAdd,
   onItemSubscriptionToggle,
+  onItemMoveToSection,
   draggingItemId,
   dragOverItemId,
   onItemDragStart,
@@ -234,6 +236,7 @@ export default function ChecklistSection({
               onUpdate={onItemUpdate}
               onDelete={onItemDelete}
               onToggleSubscription={onItemSubscriptionToggle}
+              onMoveToSection={onItemMoveToSection}
               dragOver={dragOverItemId === item.id}
               onDragStart={() => onItemDragStart(item.id)}
               onDragOver={(e) => onItemDragOver(e, item.id)}

@@ -24,6 +24,7 @@ interface Props {
   ) => void;
   onDelete: (id: string) => void;
   onToggleSubscription: (item: ItemData) => void;
+  onMoveToSection?: (itemId: string) => void;
   dragOver: boolean;
   onDragStart: () => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -39,6 +40,7 @@ export default function ChecklistItem({
   onUpdate,
   onDelete,
   onToggleSubscription,
+  onMoveToSection,
   dragOver,
   onDragStart,
   onDragOver,
@@ -379,6 +381,11 @@ export default function ChecklistItem({
           onClick: () => onToggleSubscription(item),
           active: item.subscribed,
           variant: "info" as MenuAction["variant"],
+        }] : []),
+        ...(canEdit && onMoveToSection ? [{
+          label: "Move to section",
+          icon: "move",
+          onClick: () => onMoveToSection(item.id),
         }] : []),
         ...(canEdit ? [{
           label: "Delete item",
