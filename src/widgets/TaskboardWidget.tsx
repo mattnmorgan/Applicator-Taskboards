@@ -217,6 +217,16 @@ export default function TaskboardWidget({ settings }: Props) {
               <Icon name={showNoDueDate ? "eye" : "eye-off"} size={13} />
             </button>
           </Tooltip>
+          <Tooltip text="Open Checklist" placement="bottom">
+            <button
+              className={styles.widgetToggleBtn}
+              onClick={() => {
+                window.location.href = `/app/tasklist:main/checklist/${checklistId}`;
+              }}
+            >
+              <Icon name="external-link" size={13} />
+            </button>
+          </Tooltip>
         </div>
       </div>
 

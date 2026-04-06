@@ -19,6 +19,7 @@ interface Props {
 export default function ChecklistDetail({ checklistId, onBack }: Props) {
   const [checklist, setChecklist] = useState<ChecklistDetailType | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [users, setUsers] = useState<SystemUser[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [moveRequest, setMoveRequest] = useState<{ id: string; sectionId: string } | null>(null);
@@ -41,6 +42,7 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setAccessDenied(false);
     try {
       const [clRes, usersRes] = await Promise.all([
         fetch(`/api/tasklist/checklists/${checklistId}`),
@@ -49,6 +51,8 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
       if (clRes.ok) {
         const data = await clRes.json();
         setChecklist(data);
+      } else if (clRes.status === 403) {
+        setAccessDenied(true);
       }
       if (usersRes.ok) {
         const data = await usersRes.json();
@@ -535,6 +539,24 @@ export default function ChecklistDetail({ checklistId, onBack }: Props) {
   }, [load]);
 
   if (loading) return <div className={styles.loading}>Loading…</div>;
+  if (accessDenied) return (
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <button className={styles.backBtn} onClick={onBack}>
+          <Icon name="chevron-left" size={14} /> Back
+        </button>
+      </div>
+      <div className={styles.body}>
+        <div className={styles.emptyState}>
+          <span style={{ color: "#64748b" }}><Icon name="lock" size={32} /></span>
+          <span className={styles.emptyStateTitle}>Access Denied</span>
+          <span className={styles.emptyStateDesc}>
+            You do not have permission to view this checklist.
+          </span>
+        </div>
+      </div>
+    </div>
+  );
   if (!checklist)
     return <div className={styles.loading}>Checklist not found.</div>;
 

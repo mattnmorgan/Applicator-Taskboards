@@ -13,8 +13,12 @@ export async function GET(
   params: { checklistId: string },
 ) {
   const { checklistId } = params;
+  const checklistsRm = context.recordManager<ChecklistRecord>("tasklist", "checklist");
+  if (!await checklistsRm.readRecord(checklistId)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
   const access = await getChecklistAccess(context, checklistId);
-  if (!access) return NextResponse.json({ error: "Not found or access denied" }, { status: 404 });
+  if (!access) return NextResponse.json({ error: "Access denied" }, { status: 403 });
 
   const sections = context.recordManager<SectionRecord>("tasklist", "section");
   const items = context.recordManager<ItemRecord>("tasklist", "item");
