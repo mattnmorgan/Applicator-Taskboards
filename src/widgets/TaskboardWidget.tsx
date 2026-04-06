@@ -29,12 +29,13 @@ interface Props {
     maxItems?: string;
     displayDatelessItems?: string;
   };
+  navigate?: (url: string) => void;
 }
 
 // Approximate height per item row (padding + content + gap)
 const ITEM_ROW_PX = 34;
 
-export default function TaskboardWidget({ settings }: Props) {
+export default function TaskboardWidget({ settings, navigate: navProp }: Props) {
   const [checklistName, setChecklistName] = useState<string | null>(null);
   const [sections, setSections] = useState<WidgetSection[]>([]);
   const [loading, setLoading] = useState(false);
@@ -220,9 +221,7 @@ export default function TaskboardWidget({ settings }: Props) {
           <Tooltip text="Open Checklist" placement="bottom">
             <button
               className={styles.widgetToggleBtn}
-              onClick={() => {
-                window.location.href = `/app/tasklist:main/checklist/${checklistId}`;
-              }}
+              onClick={() => { window.location.href = `/app/tasklist:main/checklist/${checklistId}`; }}
             >
               <Icon name="external-link" size={13} />
             </button>
