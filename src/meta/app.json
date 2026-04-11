@@ -4,7 +4,7 @@
   "version": {
     "major": 1,
     "minor": 0,
-    "dev": 5
+    "dev": 6
   },
   "author": "Matthew Morgan",
   "contactEmail": "matthew@morgantech.info",
@@ -275,6 +275,14 @@
       "path": "widget/[checklist-id]",
       "method": "GET",
       "description": "Get upcoming items for the homescreen widget"
+    }
+  ],
+  "notificationTopics": [
+    {
+      "id": "item-due",
+      "name": "Item Due Soon",
+      "summary": "Sent daily for checklist items due today or tomorrow that are assigned to you or on a watched checklist",
+      "ntfyTag": "calendar"
     }
   ],
   "agents": [

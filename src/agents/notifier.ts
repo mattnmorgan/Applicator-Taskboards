@@ -220,6 +220,7 @@ async function main() {
         title: `Task due ${dueLabel}`,
         message: `"${n.itemTitle}" is due ${dueLabel}`,
         type: n.type,
+        topicId: "tasklist:item-due",
       });
     } catch (err: any) {
       await sdk("logger.warn", { message: `Failed to notify user ${n.userId}: ${err.message}` });
