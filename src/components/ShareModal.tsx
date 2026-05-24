@@ -14,6 +14,15 @@ interface ShareEntry {
   role: "editor" | "viewer";
 }
 
+interface IcsLink {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+  createdBy: string;
+  creatorName: string;
+}
+
 interface Props {
   checklistId: string;
   checklistName: string;
@@ -25,7 +34,7 @@ interface Props {
 }
 
 export default function ShareModal({ checklistId, checklistName, checklistDescription, onClose, users, currentUserId, onDetailsUpdate }: Props) {
-  const [activeTab, setActiveTab] = useState<"share" | "details">("share");
+  const [activeTab, setActiveTab] = useState<"share" | "details" | "ics">("share");
   const [shares, setShares] = useState<ShareEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
@@ -38,6 +47,16 @@ export default function ShareModal({ checklistId, checklistName, checklistDescri
   const [detailsDescription, setDetailsDescription] = useState(checklistDescription);
   const [savingDetails, setSavingDetails] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+
+  // ICS tab state
+  const [icsLinks, setIcsLinks] = useState<IcsLink[]>([]);
+  const [icsLoading, setIcsLoading] = useState(false);
+  const [icsLinkName, setIcsLinkName] = useState("");
+  const [icsLinkDescription, setIcsLinkDescription] = useState("");
+  const [icsCreating, setIcsCreating] = useState(false);
+  const [icsError, setIcsError] = useState<string | null>(null);
+  const [newLinkUrl, setNewLinkUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +74,90 @@ export default function ShareModal({ checklistId, checklistName, checklistDescri
   useEffect(() => {
     load();
   }, [load]);
+
+  const loadIcsLinks = useCallback(async () => {
+    setIcsLoading(true);
+    try {
+      const res = await fetch(`/api/tasklist/checklists/${checklistId}/ics`);
+      if (res.ok) {
+        const data = await res.json();
+        setIcsLinks(data.links || []);
+      }
+    } finally {
+      setIcsLoading(false);
+    }
+  }, [checklistId]);
+
+  useEffect(() => {
+    if (activeTab === "ics") loadIcsLinks();
+  }, [activeTab, loadIcsLinks]);
+
+  const createIcsLink = async () => {
+    if (!icsLinkName.trim()) return;
+    setIcsCreating(true);
+    setIcsError(null);
+    setNewLinkUrl(null);
+    try {
+      const res = await fetch(`/api/tasklist/checklists/${checklistId}/ics`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: icsLinkName.trim(), description: icsLinkDescription.trim() }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const url = `${window.location.origin}/api/tasklist/checklist/ics/${checklistId}?key=${data.token}`;
+        setNewLinkUrl(url);
+        setCopied(false);
+        setIcsLinkName("");
+        setIcsLinkDescription("");
+        setIcsLinks((prev) => [
+          ...prev,
+          {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            createdAt: data.createdAt,
+            createdBy: "",
+            creatorName: "You",
+          },
+        ]);
+      } else {
+        const data = await res.json();
+        setIcsError(data.error || "Failed to create link");
+      }
+    } finally {
+      setIcsCreating(false);
+    }
+  };
+
+  const revokeIcsLink = async (linkId: string) => {
+    try {
+      const res = await fetch(`/api/tasklist/checklists/${checklistId}/ics/${linkId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setIcsLinks((prev) => prev.filter((l) => l.id !== linkId));
+        if (newLinkUrl) setNewLinkUrl(null);
+      }
+    } catch {}
+  };
+
+  const copyIcsUrl = async () => {
+    if (!newLinkUrl) return;
+    try {
+      await navigator.clipboard.writeText(newLinkUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  function formatDate(iso: string): string {
+    try {
+      return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    } catch {
+      return iso;
+    }
+  }
 
   const addShare = async () => {
     if (!selectedUser) return;
@@ -130,7 +233,7 @@ export default function ShareModal({ checklistId, checklistName, checklistDescri
     (u) => u.id !== currentUserId && !shares.find((s) => s.userId === u.id),
   );
 
-  const tabStyle = (tab: "share" | "details"): React.CSSProperties => ({
+  const tabStyle = (tab: "share" | "details" | "ics"): React.CSSProperties => ({
     padding: "6px 14px",
     fontSize: 13,
     fontWeight: activeTab === tab ? 600 : 400,
@@ -152,6 +255,7 @@ export default function ShareModal({ checklistId, checklistName, checklistDescri
         <div style={{ display: "flex", borderBottom: "1px solid #334155", marginBottom: 4 }}>
           <button style={tabStyle("share")} onClick={() => setActiveTab("share")}>Share</button>
           <button style={tabStyle("details")} onClick={() => setActiveTab("details")}>Details</button>
+          <button style={tabStyle("ics")} onClick={() => setActiveTab("ics")}>ICS</button>
         </div>
 
         <div className={styles.modalBody}>
@@ -309,6 +413,118 @@ export default function ShareModal({ checklistId, checklistName, checklistDescri
               )}
             </>
           )}
+
+          {activeTab === "ics" && (
+            <>
+              {/* Create new link */}
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Link name</label>
+                <input
+                  className={styles.formInput}
+                  value={icsLinkName}
+                  onChange={(e) => setIcsLinkName(e.target.value)}
+                  placeholder="e.g. Google Calendar sync"
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Description <span style={{ color: "#475569" }}>(optional)</span></label>
+                <input
+                  className={styles.formInput}
+                  value={icsLinkDescription}
+                  onChange={(e) => setIcsLinkDescription(e.target.value)}
+                  placeholder="Where is this link used?"
+                />
+              </div>
+              {icsError && (
+                <span style={{ fontSize: 12, color: "#f87171" }}>{icsError}</span>
+              )}
+
+              {/* Generated URL panel */}
+              {newLinkUrl && (
+                <div style={{
+                  background: "#0f172a",
+                  border: "1px solid #22c55e40",
+                  borderRadius: 7,
+                  padding: "10px 12px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}>
+                  <span style={{ fontSize: 11, color: "#4ade80", fontWeight: 600 }}>
+                    Link generated — copy the URL below. It will not be shown again.
+                  </span>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <code style={{
+                      flex: 1,
+                      fontSize: 11,
+                      color: "#94a3b8",
+                      background: "#1e293b",
+                      border: "1px solid #334155",
+                      borderRadius: 5,
+                      padding: "4px 8px",
+                      wordBreak: "break-all",
+                      lineHeight: 1.5,
+                    }}>
+                      {newLinkUrl}
+                    </code>
+                    <button
+                      className={styles.iconBtn}
+                      onClick={copyIcsUrl}
+                      title="Copy URL"
+                      style={{ flexShrink: 0 }}
+                    >
+                      <Icon name={copied ? "check" : "copy"} size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing links table */}
+              {!icsLoading && icsLinks.length > 0 && (
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Active links</label>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #334155" }}>
+                        <th style={{ textAlign: "left", padding: "4px 8px", color: "#64748b", fontWeight: 500 }}>Name</th>
+                        <th style={{ textAlign: "left", padding: "4px 8px", color: "#64748b", fontWeight: 500 }}>Description</th>
+                        <th style={{ textAlign: "left", padding: "4px 8px", color: "#64748b", fontWeight: 500 }}>Created</th>
+                        <th style={{ textAlign: "left", padding: "4px 8px", color: "#64748b", fontWeight: 500 }}>By</th>
+                        <th style={{ padding: "4px 8px" }} />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {icsLinks.map((link) => (
+                        <tr key={link.id} style={{ borderBottom: "1px solid #1e293b" }}>
+                          <td style={{ padding: "6px 8px", color: "#e2e8f0" }}>{link.name}</td>
+                          <td style={{ padding: "6px 8px", color: "#64748b" }}>{link.description || "—"}</td>
+                          <td style={{ padding: "6px 8px", color: "#64748b", whiteSpace: "nowrap" }}>{formatDate(link.createdAt)}</td>
+                          <td style={{ padding: "6px 8px", color: "#64748b" }}>{link.creatorName}</td>
+                          <td style={{ padding: "6px 8px", textAlign: "right" }}>
+                            <Tooltip text="Revoke link" placement="top">
+                              <button
+                                className={styles.iconBtn}
+                                onClick={() => revokeIcsLink(link.id)}
+                                style={{ color: "#64748b" }}
+                              >
+                                <Icon name="trash" size={13} />
+                              </button>
+                            </Tooltip>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {!icsLoading && icsLinks.length === 0 && !newLinkUrl && (
+                <div style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: "12px 0" }}>
+                  No ICS links yet. Generate one to sync with a calendar app.
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <div className={styles.modalFooter}>
@@ -321,6 +537,17 @@ export default function ShareModal({ checklistId, checklistName, checklistDescri
                 disabled={!detailsName.trim() || savingDetails}
               >
                 {savingDetails ? "Saving…" : "Save"}
+              </button>
+            </>
+          ) : activeTab === "ics" ? (
+            <>
+              <button className={styles.btnSecondary} onClick={onClose}>Done</button>
+              <button
+                className={styles.btnPrimary}
+                onClick={createIcsLink}
+                disabled={!icsLinkName.trim() || icsCreating}
+              >
+                {icsCreating ? "Generating…" : "Generate Link"}
               </button>
             </>
           ) : (

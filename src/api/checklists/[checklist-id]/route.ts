@@ -4,6 +4,7 @@ import { ChecklistRecord } from "@/src/types/ChecklistRecord";
 import { SectionRecord } from "@/src/types/SectionRecord";
 import { ItemRecord } from "@/src/types/ItemRecord";
 import { SubscriptionRecord } from "@/src/types/SubscriptionRecord";
+import { IcsLinkRecord } from "@/src/types/IcsLinkRecord";
 import { getChecklistAccess, deleteAllChecklistShares } from "@/src/lib/checklist-access";
 
 // GET /api/tasklist/checklists/:checklistId — full checklist with sections, items, and subscription state
@@ -153,6 +154,13 @@ export async function DELETE(
 
     // Delete all shares (contextual authorities) for this checklist
     await deleteAllChecklistShares(context, checklistId);
+
+    // Delete all ICS feed links for this checklist
+    const icsLinks = context.recordManager<IcsLinkRecord>("tasklist", "ics_link");
+    const icsResult = await icsLinks.readRecords({ fields: { checklistId }, limit: 500 });
+    if (icsResult.records.length > 0) {
+      await icsLinks.bulkDeleteRecords(icsResult.records.map((r) => r.id));
+    }
 
     // Delete the checklist
     const checklists = context.recordManager("tasklist", "checklist");

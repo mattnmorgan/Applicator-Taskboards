@@ -4,7 +4,7 @@
   "version": {
     "major": 1,
     "minor": 0,
-    "dev": 7
+    "dev": 10
   },
   "author": "Matthew Morgan",
   "contactEmail": "matthew@morgantech.info",
@@ -110,6 +110,49 @@
           "name": "order",
           "type": "number",
           "description": "Display order within the complete or incomplete group in a section"
+        }
+      ]
+    },
+    {
+      "name": "ics_link",
+      "description": "A calendar feed link for a checklist, authenticated by a secret token",
+      "fields": [
+        {
+          "name": "checklistId",
+          "type": "relationship",
+          "relatedTo": "checklist",
+          "required": true,
+          "description": "Checklist this link feeds"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "description": "User-defined label for this link"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "description": "Optional description of where this link is used"
+        },
+        {
+          "name": "tokenHash",
+          "type": "string",
+          "required": true,
+          "description": "SHA-256 hash of the secret token embedded in the feed URL"
+        },
+        {
+          "name": "createdBy",
+          "type": "relationship",
+          "relatedTo": "system:users",
+          "required": true,
+          "description": "User who created the link"
+        },
+        {
+          "name": "createdAt",
+          "type": "string",
+          "required": true,
+          "description": "ISO 8601 creation timestamp"
         }
       ]
     },
@@ -275,6 +318,26 @@
       "path": "widget/[checklist-id]",
       "method": "GET",
       "description": "Get upcoming items for the homescreen widget"
+    },
+    {
+      "path": "checklists/[checklist-id]/ics",
+      "method": "GET",
+      "description": "List ICS feed links for a checklist (owner only)"
+    },
+    {
+      "path": "checklists/[checklist-id]/ics",
+      "method": "POST",
+      "description": "Create an ICS feed link for a checklist (owner only)"
+    },
+    {
+      "path": "checklists/[checklist-id]/ics/[link-id]",
+      "method": "DELETE",
+      "description": "Revoke an ICS feed link (owner only)"
+    },
+    {
+      "path": "checklist/ics/[checklist-id]",
+      "method": "GET",
+      "description": "Serve ICS calendar data for a checklist (public, authenticated via key query parameter)"
     }
   ],
   "notificationTopics": [
