@@ -41,20 +41,6 @@ export async function PATCH(
     if (body.reusable !== undefined) updates.reusable = body.reusable;
     if (body.complete !== undefined) {
       updates.complete = body.complete;
-      // Reusable items stay in the incomplete group regardless of completion — keep their order
-      if (body.order === undefined && !existing.data.reusable) {
-        // Compute max order in target group within the same section
-        const allItems = await itemManager.readRecords({ fields: { sectionId: existing.data.sectionId }, limit: 2000 });
-        const targetGroup = allItems.records.filter(
-          (r) =>
-            r.id !== itemId &&
-            (body.complete
-              ? !!r.data.complete && !r.data.reusable
-              : !r.data.complete || r.data.reusable),
-        );
-        const maxOrder = targetGroup.reduce((m, r) => Math.max(m, r.data.order ?? 0), -1);
-        updates.order = maxOrder + 1;
-      }
     }
     if (body.order !== undefined) updates.order = body.order;
     if (body.assigneeId !== undefined) updates.assigneeId = body.assigneeId;
