@@ -29,7 +29,7 @@ export async function POST(
 
     // Determine max order among incomplete items in this section
     const existing = await items.readRecords({ fields: { sectionId }, limit: 2000 });
-    const incompleteItems = existing.records.filter((r) => !r.data.complete);
+    const incompleteItems = existing.records.filter((r) => !r.data.complete || r.data.reusable);
     const maxOrder = incompleteItems.reduce((m, r) => Math.max(m, r.data.order ?? 0), -1);
 
     const table = await items.getTable();

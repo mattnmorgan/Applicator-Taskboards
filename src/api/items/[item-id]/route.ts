@@ -46,7 +46,11 @@ export async function PATCH(
         // Compute max order in target group within the same section
         const allItems = await itemManager.readRecords({ fields: { sectionId: existing.data.sectionId }, limit: 2000 });
         const targetGroup = allItems.records.filter(
-          (r) => r.id !== itemId && !!r.data.complete === body.complete,
+          (r) =>
+            r.id !== itemId &&
+            (body.complete
+              ? !!r.data.complete && !r.data.reusable
+              : !r.data.complete || r.data.reusable),
         );
         const maxOrder = targetGroup.reduce((m, r) => Math.max(m, r.data.order ?? 0), -1);
         updates.order = maxOrder + 1;
