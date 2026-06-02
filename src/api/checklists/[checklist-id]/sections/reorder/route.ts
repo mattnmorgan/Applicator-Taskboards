@@ -24,11 +24,9 @@ export async function POST(
     const sectionManager = context.recordManager<SectionRecord>("tasklist", "section");
     const table = await sectionManager.getTable();
 
-    await Promise.all(
-      body.sections.map((s: { id: string; order: number }) =>
-        sectionManager.updateRecord(table, s.id, { order: s.order }),
-      ),
-    );
+    for (const s of body.sections as { id: string; order: number }[]) {
+      await sectionManager.updateRecord(table, s.id, { order: s.order });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

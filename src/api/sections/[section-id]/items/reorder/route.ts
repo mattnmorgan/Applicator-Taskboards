@@ -29,11 +29,9 @@ export async function POST(
     const items = context.recordManager<ItemRecord>("tasklist", "item");
     const table = await items.getTable();
 
-    await Promise.all(
-      body.items.map((i: { id: string; order: number }) =>
-        items.updateRecord(table, i.id, { order: i.order }),
-      ),
-    );
+    for (const i of body.items as { id: string; order: number }[]) {
+      await items.updateRecord(table, i.id, { order: i.order });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
